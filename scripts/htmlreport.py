@@ -20,8 +20,6 @@ from urlparse import urlsplit
 import glob
 import importlib
 
-reload(sys)
-sys.setdefaultencoding('utf8')
 
 sys.path.append(os.path.realpath(os.path.dirname(os.path.realpath(__file__)) + os.sep + ".."))
 

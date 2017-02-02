@@ -18,8 +18,6 @@ import json
 from urlparse import urlsplit
 from core.util.base_util import BaseUtil
 from core.lib.utils import *
-reload(sys)
-sys.setdefaultencoding('utf8')
 
 
 

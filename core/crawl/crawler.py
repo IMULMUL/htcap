@@ -10,40 +10,27 @@ Foundation; either version 2 of the License, or (at your option) any later
 version.
 """
 
-from __future__ import unicode_literals
-import sys
-import os
-import datetime
-import time
 import getopt
 import json
-import re
-from urlparse import urlsplit, urljoin
-from urllib import unquote
-import urllib2
-import threading
-import subprocess
-from random import choice
-import string
 import ssl
+import string
+import threading
+from random import choice
+from urllib import unquote
 
+import urllib2
+from crawler_thread import CrawlerThread
+from lib.crawl_result import *
+from lib.shared import *
+from urlparse import urlsplit
 
-from core.lib.exception import *
 from core.lib.cookie import Cookie
 from core.lib.database import Database
-
-from lib.shared import *
-from lib.crawl_result import *
-from core.lib.request import Request
 from core.lib.http_get import HttpGet
+from core.lib.request import Request
 from core.lib.shell import CommandExecutor
-
-from crawler_thread import CrawlerThread
-
-from core.lib.utils import *
-from core.constants import *
-
 from lib.utils import *
+
 
 class Crawler:
 

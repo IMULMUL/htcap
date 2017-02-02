@@ -22,9 +22,6 @@ from core.lib.shell import CommandExecutor
 from core.util.base_util import BaseUtil
 from core.lib.cookie import Cookie
 
-reload(sys)
-sys.setdefaultencoding('utf8')
-
 class Login(BaseUtil):
 
 	@staticmethod

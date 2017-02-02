@@ -5,8 +5,6 @@ import json
 
 from core.util.base_util import BaseUtil
 
-reload(sys)
-sys.setdefaultencoding('utf8')
 
 class Lsvuln(BaseUtil):
 
