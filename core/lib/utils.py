@@ -17,7 +17,7 @@ import pipes
 import re
 import posixpath
 
-from urlparse import urlsplit, urljoin, parse_qsl
+from urllib.parse import urlsplit, urljoin, parse_qsl
 from core.lib.exception import *
 from core.constants import *
 
@@ -52,7 +52,7 @@ def generate_filename(name, ext=None, out_file_overwrite=False, ask_out_file_ove
 			sys.stdout.write("File %s already exists. Overwrite [y/N]: " % fname())
 			out_file_overwrite = sys.stdin.read(1) == "y"
 		except KeyboardInterrupt:
-			print "\nAborted"
+			print("\nAborted")
 			sys.exit(0)
 
 	if not out_file_overwrite:

@@ -89,7 +89,7 @@ class Scanner:
 
 
 	def usage(self):
-		print (
+		print(
 			"\n"
 			"Usage: scan [options] <scanner> <db_file> [scanner_options]\n"
 			"Options: \n"

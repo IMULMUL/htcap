@@ -42,7 +42,7 @@ class Lsajax(BaseUtil):
 
 
 		# if len(args) < 1:
-		# 	print (
+		# 	print(
 		# 		"usage: %s <dbfile> [<final_part_of_query>]\n"
 		# 		"  Options:\n    -d    print POST data\n\n"
 		# 		"  Base query: %s" % (argv[0], qry)

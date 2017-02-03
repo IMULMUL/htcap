@@ -51,11 +51,11 @@ class Sqlmap(BaseScanner):
 
 
 	def usage(self):
-		print (	"htcap sqlmap module\nusage: scan sqlmap <db_file> [options]\n"
+		print("htcap sqlmap module\nusage: scan sqlmap <db_file> [options]\n"
 				"Options are:\n"
 				"  -h   this help\n"
 				"  -s   do not skip duplicated urls\n"
-			)
+		      )
 
 	def get_settings(self):
 		return dict(

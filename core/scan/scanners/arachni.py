@@ -61,7 +61,7 @@ class Arachni(BaseScanner):
 
 
 	def usage(self):
-		print (	"htcap arachni module\nusage: scan arachni <db_file> [options]\n"
+		print("htcap arachni module\nusage: scan arachni <db_file> [options]\n"
 				"Options are:\n"
 				"  -h   this help\n"
 				"  -s   do not skip duplicated urls\n"

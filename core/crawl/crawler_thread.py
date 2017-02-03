@@ -24,8 +24,8 @@ import uuid
 
 from urlparse import urlparse, urlsplit, urljoin, parse_qsl
 
-from core.lib.exception import *
-from core.crawl.lib.shared import *
+# from core.lib.exception import *
+# from core.crawl.lib.shared import *
 
 
 from core.crawl.lib.probe import Probe
@@ -35,11 +35,12 @@ from core.lib.cookie import Cookie
 from core.lib.shell import CommandExecutor
 from core.lib.request import Request
 
-from core.lib.utils import *
-from core.constants import *
 
-from lib.utils import *
-from lib.crawl_result import *
+# from core.lib.utils import *
+# from core.constants import *
+
+# from lib.utils import *
+# from lib.crawl_result import *
 
 
 
