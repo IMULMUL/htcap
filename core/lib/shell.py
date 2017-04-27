@@ -10,51 +10,50 @@ Foundation; either version 2 of the License, or (at your option) any later
 version.
 """
 
-import sys
 import subprocess
+import sys
 import threading
 
 
 class CommandExecutor:
-	"""
-	Executes shell command and returns its output.
-	The process is killed afer <timeout> seconds
-	"""
+    """
+    Executes shell command and returns its output.
+    The process is killed afer <timeout> seconds
+    """
 
-	def __init__(self, cmd, stderr = False):
-		#self.cmd = cmd
-		self.cmd = [c.encode("utf-8") for c in cmd]
-		self.stderr = stderr		
-		self.out = None
-		self.err = None
-		self.process = None
-		self.thread = None
-		
+    def __init__(self, cmd, stderr=False):
+        # self.cmd = cmd
+        self.cmd = [c.encode("utf-8") for c in cmd]
+        self.stderr = stderr
+        self.out = None
+        self.err = None
+        self.process = None
+        self.thread = None
 
-	def kill(self):
-			self.process.kill()
-			self.thread.join()
-			
+    def kill(self):
+        self.process.kill()
+        self.thread.join()
 
-	def execute(self, timeout):
-		
-		def executor():					
-			try:
-				# close_fds=True is needed in threaded programs				
-				self.process = subprocess.Popen(self.cmd,stderr=subprocess.PIPE, stdout=subprocess.PIPE, bufsize=0, close_fds=sys.platform != "win32")
-				self.out, self.err = self.process.communicate()
-				
-			except Exception as e:
-				raise
-			
-		self.thread = threading.Thread(target = executor)
-		self.thread.start()
-		
-		self.thread.join(int(timeout))
-	
-		if self.thread.is_alive():
-			self.kill()											
-			self.out = None
-			self.err = "Executor: execution timeout"
+    def execute(self, timeout):
 
-		return self.out if not self.stderr else (self.out, self.err)
+        def executor():
+            try:
+                # close_fds=True is needed in threaded programs
+                self.process = subprocess.Popen(self.cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, bufsize=0,
+                                                close_fds=sys.platform != "win32")
+                self.out, self.err = self.process.communicate()
+
+            except Exception as e:
+                raise
+
+        self.thread = threading.Thread(target=executor)
+        self.thread.start()
+
+        self.thread.join(int(timeout))
+
+        if self.thread.is_alive():
+            self.kill()
+            self.out = None
+            self.err = "Executor: execution timeout"
+
+        return self.out if not self.stderr else (self.out, self.err)

@@ -11,10 +11,8 @@ version.
 """
 
 
-
 class CrawlResult:
-	def __init__(self, request, found_requests = None, errors = None):
-		self.request = request
-		self.found_requests = found_requests if found_requests else []
-		self.errors = errors if errors else []
-
+    def __init__(self, request, found_requests=None, errors=None):
+        self.request = request
+        self.found_requests = found_requests if found_requests else []
+        self.errors = errors if errors else []

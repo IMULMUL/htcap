@@ -11,245 +11,205 @@ version.
 """
 
 from __future__ import unicode_literals
-import time
-import re
+
 import json
-import urllib
-import cookielib
-import threading
-import base64
-
-import tempfile
 import os
+import tempfile
+import threading
 import uuid
+from time import time
+from urlparse import urlsplit
 
-from urlparse import urlparse, urlsplit, urljoin, parse_qsl
-
-from core.lib.exception import *
-from core.crawl.lib.shared import *
-
-
-from core.crawl.lib.probe import Probe
-
-from core.lib.http_get import HttpGet
-from core.lib.cookie import Cookie
-from core.lib.shell import CommandExecutor
-from core.lib.request import Request
-
-from core.lib.utils import *
 from core.constants import *
-
-from lib.utils import *
-from lib.crawl_result import *
-
+from core.crawl.lib.crawl_result import CrawlResult
+from core.crawl.lib.probe import Probe
+from core.crawl.lib.shared import Shared
+from core.crawl.lib.utils import adjust_requests
+from core.lib.exception import ThreadExitRequestException
+from core.lib.http_get import HttpGet
+from core.lib.shell import CommandExecutor
 
 
 class CrawlerThread(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+        self.thread_uuid = uuid.uuid4()
+        self.process_retries = 2
+        self.process_retries_interval = 0.5
+
+        self.status = THSTAT_RUNNING
+        self.exit = False
 
-	def __init__(self):
-		threading.Thread.__init__(self)
-		self.thread_uuid = uuid.uuid4()
-		self.process_retries = 2
-		self.process_retries_interval = 0.5
+        self.cookie_file = "%s%shtcap_cookiefile-%s.json" % (tempfile.gettempdir(), os.sep, self.thread_uuid)
 
-		self.status = THSTAT_RUNNING
-		self.exit = False
+    def run(self):
+        self.crawl()
 
-		self.cookie_file = "%s%shtcap_cookiefile-%s.json" % (tempfile.gettempdir(), os.sep, self.thread_uuid)
+    def wait_request(self):
+        request = None
+        Shared.th_condition.acquire()
+        while True:
+            if self.exit == True:
+                Shared.th_condition.notifyAll()
+                Shared.th_condition.release()
+                raise ThreadExitRequestException("exit request received")
 
+            if Shared.requests_index >= len(Shared.requests):
+                self.status = THSTAT_WAITING
+                Shared.th_condition.wait()  # The wait method releases the lock, blocks the current thread until another thread calls notify
+                continue
 
-	def run(self):
-		self.crawl()
+            request = Shared.requests[Shared.requests_index]
+            Shared.requests_index += 1
 
+            break
 
+        Shared.th_condition.release()
 
-	def wait_request(self):
-		request = None
-		Shared.th_condition.acquire()
-		while True:
-			if self.exit == True:
-				Shared.th_condition.notifyAll()
-				Shared.th_condition.release()
-				raise ThreadExitRequestException("exit request received")
+        self.status = THSTAT_RUNNING
 
-			if Shared.requests_index >= len(Shared.requests):
-				self.status = THSTAT_WAITING
-				Shared.th_condition.wait() # The wait method releases the lock, blocks the current thread until another thread calls notify
-				continue
+        return request
 
-			request = Shared.requests[Shared.requests_index]
-			Shared.requests_index += 1
+    def load_probe_json(self, jsn):
+        jsn = jsn.strip()
+        if not jsn: jsn = "["
+        if jsn[-1] != "]":
+            jsn += '{"status":"ok", "partialcontent":true}]'
+        try:
+            return json.loads(jsn)
+        except Exception:
+            # print "-- JSON DECODE ERROR %s" % jsn
+            raise
 
-			break
+    def send_probe(self, request, errors):
 
-		Shared.th_condition.release()
+        url = request.url
+        jsn = None
+        probe = None
+        retries = self.process_retries
+        params = []
+        cookies = []
 
-		self.status = THSTAT_RUNNING
+        if request.method == "POST":
+            params.append("-P")
+            if request.data:
+                params.extend(("-D", request.data))
 
-		return request
+        if len(request.cookies) > 0:
+            for cookie in request.cookies:
+                cookies.append(cookie.get_dict())
 
+            with open(self.cookie_file, 'w') as fil:
+                fil.write(json.dumps(cookies))
 
+            params.extend(("-c", self.cookie_file))
 
-	def load_probe_json(self, jsn):
-		jsn = jsn.strip()
-		if not jsn: jsn = "["
-		if jsn[-1] != "]":
-			jsn += '{"status":"ok", "partialcontent":true}]'
-		try:
-			return json.loads(jsn)
-		except Exception:
-			#print "-- JSON DECODE ERROR %s" % jsn
-			raise
+        if request.http_auth:
+            params.extend(("-p", request.http_auth))
 
+        if Shared.options['set_referer'] and request.referer:
+            params.extend(("-r", request.referer))
 
-	def send_probe(self, request,  errors):
+        params.extend(("-i", str(request.db_id)))
 
-		url = request.url
-		jsn = None
-		probe = None
-		retries = self.process_retries
-		params = []
-		cookies = []
+        params.append(url)
 
+        while retries:
+            # while False:
 
-		if request.method == "POST":
-			params.append("-P")
-			if request.data:
-				params.extend(("-D", request.data))
+            # print cmd_to_str(Shared.probe_cmd + params)
+            # print ""
 
+            cmd = CommandExecutor(Shared.probe_cmd + params)
+            jsn = cmd.execute(Shared.options['process_timeout'] + 2)
 
-		if len(request.cookies) > 0:
-			for cookie in request.cookies:
-				cookies.append(cookie.get_dict())
+            if jsn == None:
+                errors.append(ERROR_PROBEKILLED)
+                time.sleep(self.process_retries_interval)  # ... ???
+                retries -= 1
+                continue
 
-			with open(self.cookie_file,'w') as fil:
-				fil.write(json.dumps(cookies))
+            # try to decode json also after an exception .. sometimes phantom crashes BUT returns a valid json ..
+            try:
+                if jsn and type(jsn) is not str:
+                    jsn = jsn[0]
+                probeArray = self.load_probe_json(jsn)
+            except Exception as e:
+                raise
 
-			params.extend(("-c", self.cookie_file))
+            if probeArray:
+                probe = Probe(probeArray, request)
 
+                if probe.status == "ok":
+                    break
 
+                errors.append(probe.errcode)
 
-		if request.http_auth:
-			params.extend(("-p" ,request.http_auth))
+                if probe.errcode in (ERROR_CONTENTTYPE, ERROR_PROBE_TO):
+                    break
 
-		if Shared.options['set_referer'] and request.referer:
-			params.extend(("-r", request.referer))
+            time.sleep(self.process_retries_interval)
+            retries -= 1
 
+        return probe
 
-		params.extend(("-i", str(request.db_id)))
+    def crawl(self):
 
-		params.append(url)
+        while True:
+            url = None
+            cookies = []
+            requests = []
 
+            requests_to_crawl = []
+            redirects = 0
+            errors = []
 
-		while retries:
-		#while False:
+            try:
+                request = self.wait_request()
+            except ThreadExitRequestException:
+                if os.path.exists(self.cookie_file):
+                    os.remove(self.cookie_file)
+                return
+            except Exception as e:
+                print "-->" + str(e)
+                continue
 
-			# print cmd_to_str(Shared.probe_cmd + params)
-			# print ""
+            url = request.url
 
-			cmd = CommandExecutor(Shared.probe_cmd + params)
-			jsn = cmd.execute(Shared.options['process_timeout'] + 2)
+            purl = urlsplit(url)
 
-			if jsn == None:
-				errors.append(ERROR_PROBEKILLED)
-				time.sleep(self.process_retries_interval) # ... ???
-				retries -= 1
-				continue
+            probe = None
 
+            probe = self.send_probe(request, errors)
 
-			# try to decode json also after an exception .. sometimes phantom crashes BUT returns a valid json ..
-			try:
-				if jsn and type(jsn) is not str:
-					jsn = jsn[0]
-				probeArray = self.load_probe_json(jsn)
-			except Exception as e:
-				raise
+            if probe:
+                if probe.status == "ok" or probe.errcode == ERROR_PROBE_TO:
 
+                    requests = probe.requests
 
-			if probeArray:
-				probe = Probe(probeArray, request)
+                    if probe.html:
+                        request.html = probe.html
 
-				if probe.status == "ok":
-					break
+                    if len(probe.user_output) > 0:
+                        request.user_output = probe.user_output
 
-				errors.append(probe.errcode)
+            else:
+                errors.append(ERROR_PROBEFAILURE)
+                # get urls with python to continue crawling
+                if Shared.options['use_urllib_onerror'] == False:
+                    continue
+                try:
+                    hr = HttpGet(request, Shared.options['process_timeout'], self.process_retries,
+                                 Shared.options['useragent'], Shared.options['proxy'])
+                    requests = hr.get_requests()
+                except Exception as e:
+                    errors.append(str(e))
 
-				if probe.errcode in (ERROR_CONTENTTYPE, ERROR_PROBE_TO):
-					break
+            # set out_of_scope, apply user-supplied filters to urls (ie group_qs)
+            adjust_requests(requests)
 
-			time.sleep(self.process_retries_interval)
-			retries -= 1
-
-		return probe
-
-
-
-	def crawl(self):
-
-		while True:
-			url = None
-			cookies = []
-			requests = []
-
-			requests_to_crawl = []
-			redirects = 0
-			errors = []
-
-			try:
-				request = self.wait_request()
-			except ThreadExitRequestException:
-				if os.path.exists(self.cookie_file):
-					os.remove(self.cookie_file)
-				return
-			except Exception as e:
-				print "-->"+str(e)
-				continue
-
-			url = request.url
-
-			purl = urlsplit(url)
-
-
-			probe = None
-
-			probe = self.send_probe(request, errors)
-
-			if probe:
-				if probe.status == "ok" or probe.errcode == ERROR_PROBE_TO:
-
-					requests = probe.requests
-
-					if probe.html:
-						request.html = probe.html
-
-					if len(probe.user_output) > 0:
-						request.user_output = probe.user_output
-
-			else :
-				errors.append(ERROR_PROBEFAILURE)
-				# get urls with python to continue crawling
-				if Shared.options['use_urllib_onerror'] == False:
-					continue
-				try:
-					hr = HttpGet(request, Shared.options['process_timeout'], self.process_retries, Shared.options['useragent'], Shared.options['proxy'])
-					requests = hr.get_requests()
-				except Exception as e:
-					errors.append(str(e))
-
-
-			# set out_of_scope, apply user-supplied filters to urls (ie group_qs)
-			adjust_requests(requests)
-
-			Shared.main_condition.acquire()
-			res = CrawlResult(request, requests, errors)
-			Shared.crawl_results.append(res)
-			Shared.main_condition.notify()
-			Shared.main_condition.release()
-
-
-
-
-
-
-
-
+            Shared.main_condition.acquire()
+            res = CrawlResult(request, requests, errors)
+            Shared.crawl_results.append(res)
+            Shared.main_condition.notify()
+            Shared.main_condition.release()

@@ -10,7 +10,6 @@ Foundation; either version 2 of the License, or (at your option) any later
 version.
 """
 
-
 THSTAT_WAITING = 0
 THSTAT_RUNNING = 1
 
@@ -34,7 +33,6 @@ REQTYPE_JSONP = "jsonp"
 REQTYPE_FORM = "form"
 REQTYPE_REDIRECT = "redirect"
 REQTYPE_UNKNOWN = "unknown"
-
 
 ERROR_CONTENTTYPE = "contentType"
 ERROR_TIMEOUT = "timeout"

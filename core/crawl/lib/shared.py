@@ -12,21 +12,23 @@ version.
 
 
 class Shared:
-	"""
-	data shared between threads
-	"""
-	
-	main_condition = None
-	th_condition = None
+    """
+    data shared between threads
+    """
 
-	requests = []
-	requests_index = 0
-	crawl_results = []
+    def __init__(self):
+        pass
 
-	starturl = ""
-	start_cookies = []
-	allowed_domains = set()
-	excluded_urls = set()	
-	
-	options = {}	
+    main_condition = None
+    th_condition = None
 
+    requests = []
+    requests_index = 0
+    crawl_results = []
+
+    starturl = ""
+    start_cookies = []
+    allowed_domains = set()
+    excluded_urls = set()
+
+    options = {}
