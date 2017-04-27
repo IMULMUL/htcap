@@ -220,7 +220,8 @@ Options:
             try:
                 Shared.main_condition.release()
                 Shared.th_condition.release()
-            except:
+            except Exception as e:
+                print(str(e))
                 pass
 
     def _main(self, argv):
@@ -282,7 +283,7 @@ Options:
                     with open(v) as cf:
                         cookie_string = cf.read()
                 except Exception as e:
-                    print("* Error reading cookie file")
+                    print("* Error reading cookie file: {}".format(str(e)))
                     sys.exit(1)
             elif o == '-r':  # start referrer
                 start_referer = v
@@ -323,13 +324,13 @@ Options:
             elif o == "-U":  # user agent
                 Shared.options['useragent'] = v
             elif o == "-s":  # crawl scope
-                if not v in (CRAWLSCOPE_DOMAIN, CRAWLSCOPE_DIRECTORY, CRAWLSCOPE_URL):
+                if v not in (CRAWLSCOPE_DOMAIN, CRAWLSCOPE_DIRECTORY, CRAWLSCOPE_URL):
                     self._usage()
                     print("* ERROR: wrong scope set '%s'" % v)
                     sys.exit(1)
                 Shared.options['scope'] = v
             elif o == "-m":  # crawl mode
-                if not v in (CRAWLMODE_PASSIVE, CRAWLMODE_ACTIVE, CRAWLMODE_AGGRESSIVE):
+                if v not in (CRAWLMODE_PASSIVE, CRAWLMODE_ACTIVE, CRAWLMODE_AGGRESSIVE):
                     self._usage()
                     print("* ERROR: wrong mode set '%s'" % v)
                     sys.exit(1)
@@ -366,7 +367,7 @@ Options:
             try:
                 start_cookies = self._parse_cookie_string(cookie_string)
             except Exception as e:
-                print("error decoding cookie string")
+                print("error decoding cookie string: {}".format(str(e)))
                 sys.exit(1)
 
         for sc in start_cookies:
@@ -403,7 +404,7 @@ Options:
             print(str(e))
             sys.exit(1)
 
-        database.save_crawl_info(
+        crawl_id = database.save_crawl_info(
             htcap_version=get_program_infos()['version'],
             target=Shared.starturl,
             start_date=self.crawl_start_date,
@@ -504,7 +505,7 @@ Options:
             Shared.requests_index, (self.crawl_end_date - self.crawl_start_date) / 60))
 
         # update end date in db
-        database.save_crawl_info(end_date=self.crawl_end_date)
+        database.update_crawl_end_date(crawl_id, self.crawl_end_date)
 
     def _set_probe(self, save_html, user_script):
         """
@@ -580,6 +581,7 @@ Options:
                 k, v = t.split("=", 1)
                 cookies.append({"name": k.strip(), "value": unquote(v.strip())})
         except Exception as e:
+            print(str(e))
             raise
 
         return cookies
@@ -627,7 +629,8 @@ Options:
             url = None
             try:
                 directive, url = re.sub("\#.*", "", line).split(":", 1)
-            except:
+            except Exception as e:
+                print(str(e))
                 continue  # ignore errors
 
             if re.match("(dis)?allow", directive.strip(), re.I):

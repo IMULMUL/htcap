@@ -17,7 +17,7 @@ import os
 import tempfile
 import threading
 import uuid
-from time import time
+from time import sleep
 from urlparse import urlsplit
 
 from core.constants import *
@@ -125,7 +125,7 @@ class CrawlerThread(threading.Thread):
 
             if jsn == None:
                 errors.append(ERROR_PROBEKILLED)
-                time.sleep(self.process_retries_interval)  # ... ???
+                sleep(self.process_retries_interval)  # ... ???
                 retries -= 1
                 continue
 
@@ -148,7 +148,7 @@ class CrawlerThread(threading.Thread):
                 if probe.errcode in (ERROR_CONTENTTYPE, ERROR_PROBE_TO):
                     break
 
-            time.sleep(self.process_retries_interval)
+            sleep(self.process_retries_interval)
             retries -= 1
 
         return probe

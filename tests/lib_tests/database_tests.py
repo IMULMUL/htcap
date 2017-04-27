@@ -80,28 +80,42 @@ class DatabaseTest(DatabaseTestCase):
         self.db.initialize()
 
         self.connect_method_mock.assert_called_once()
-        self.assertEqual(self.cursor_mock.execute.call_count, 8)
-        self.commit_method_mock.assert_called_once()
-        self.close_method_mock.assert_called_once()
-
-    def test_save_crawl_info_empty(self):
-        self.db.save_crawl_info()
-
-        self.connect_method_mock.assert_called_once()
-        self.cursor_mock.execute.assert_called_once_with("UPDATE crawl_info SET ", [])
+        self.assertEqual(self.cursor_mock.execute.call_count, 7)
         self.commit_method_mock.assert_called_once()
         self.close_method_mock.assert_called_once()
 
     def test_save_crawl_info(self):
-        self.db.save_crawl_info(
+        self.cursor_mock.fetchone.return_value = {"id": 42}
+
+        result = self.db.save_crawl_info(
             htcap_version="42.0", target="my target", start_date="my start date",
-            end_date="my end date", commandline="my commandline", user_agent="some user agent"
+            commandline="my commandline", user_agent="some user agent"
         )
 
         self.connect_method_mock.assert_called_once()
+        self.assertEqual(
+            self.cursor_mock.execute.call_args_list[0],
+            call(
+                "INSERT INTO crawl_info VALUES (?,?,?,?,?,?)",
+                ["42.0", "my target", "my start date", None,
+                 "my commandline", "some user agent"]))
+        self.assertEqual(
+            self.cursor_mock.execute.call_args_list[1],
+            call(
+                "SELECT last_insert_rowid() AS id"
+            )
+        )
+        self.commit_method_mock.assert_called_once()
+        self.close_method_mock.assert_called_once()
+        self.assertEqual(result, 42)
+
+    def test_update_crawl_end_date(self):
+        self.db.update_crawl_end_date(53, "some end date")
+
+        self.connect_method_mock.assert_called_once()
         self.cursor_mock.execute.assert_called_once_with(
-            "UPDATE crawl_info SET htcap_version=?, target=?, start_date=?, end_date=?, commandline=?, user_agent=?",
-            ["42.0", "my target", "my start date", "my end date", "my commandline", "some user agent"])
+            "UPDATE crawl_info SET end_date = ? WHERE rowid = ?",
+            ["some end date", 53])
         self.commit_method_mock.assert_called_once()
         self.close_method_mock.assert_called_once()
 

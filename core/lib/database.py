@@ -71,62 +71,58 @@ class Database:
         cur.execute(_CREATE_ASSESSMENT_TABLE_QUERY)
         cur.execute(_CREATE_VULNERABILITY_TABLE_QUERY)
 
-        cur.execute("INSERT INTO crawl_info VALUES (NULL, NULL, NULL, NULL, NULL, NULL)")
-
         self.commit()
         self.close()
 
     def save_crawl_info(self,
-                        htcap_version=None, target=None, start_date=None, end_date=None, commandline=None,
-                        user_agent=None):
+                        htcap_version="NULL", target="NULL", start_date="NULL", commandline="NULL",
+                        user_agent="NULL"):
         """
         connect, save the provided crawl info then close the connection
     
         :param htcap_version: version of the running instance of htcap
         :param target: start url of the crawl
         :param start_date: start date of the crawl
-        :param end_date:  end date of the crawl
         :param commandline: parameter given to htcap for the crawl
         :param user_agent: user defined agent
+        :return: the id of the crawl
         """
-        values = []
-        pars = []
+        values = [htcap_version, target, start_date, None, commandline, user_agent]
 
-        if htcap_version:
-            pars.append("htcap_version=?")
-            values.append(htcap_version)
-
-        if target:
-            pars.append("target=?")
-            values.append(target)
-
-        if start_date:
-            pars.append("start_date=?")
-            values.append(start_date)
-
-        if end_date:
-            pars.append("end_date=?")
-            values.append(end_date)
-
-        if commandline:
-            pars.append("commandline=?")
-            values.append(commandline)
-
-        if user_agent:
-            pars.append("user_agent=?")
-            values.append(user_agent)
-
-        qry = "UPDATE crawl_info SET %s" % ", ".join(pars)
+        insert_query = "INSERT INTO crawl_info VALUES (?,?,?,?,?,?)"
 
         try:
             self.connect()
             cur = self.conn.cursor()
-            cur.execute(qry, values)
+            cur.execute(insert_query, values)
+            cur.execute("SELECT last_insert_rowid() AS id")  # retrieve its id
+            crawl_id = cur.fetchone()['id']
+            self.commit()
+            self.close()
+
+            return crawl_id
+
+        except Exception as e:
+            print(str(e))
+
+    def update_crawl_end_date(self, crawl_id, crawl_end_date):
+        """
+        connect, save the end date then close the connection
+        :param crawl_id: 
+        :param crawl_end_date: 
+        """
+        update_crawl_query = "UPDATE crawl_info SET end_date = ? WHERE rowid = ?"
+
+        try:
+            self.connect()
+            cur = self.conn.cursor()
+            cur.execute(update_crawl_query, [crawl_end_date, crawl_id])
             self.commit()
             self.close()
 
         except Exception as e:
             print(str(e))
+        pass
 
     def save_request(self, request):
         """
@@ -373,7 +369,7 @@ CREATE TABLE crawl_info (
 
 _CREATE_REQUEST_TABLE_QUERY = """
 CREATE TABLE request (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY,
     id_parent INTEGER,
     type TEXT,
     method TEXT,
@@ -398,7 +394,7 @@ CREATE INDEX request_index ON request (type, method, url, http_auth, data, trigg
 
 _CREATE_REQUEST_CHILD_TABLE_QUERY = """
 CREATE TABLE request_child (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY,
     id_request INTEGER NOT NULL,
     id_child INTEGER NOT NULL
 )
@@ -410,7 +406,7 @@ CREATE INDEX request_child_index ON request_child (id_request, id_child)
 
 _CREATE_ASSESSMENT_TABLE_QUERY = """
 CREATE TABLE assessment(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY,
     scanner TEXT,
     start_date INTEGER,
     end_date INTEGER
@@ -419,7 +415,7 @@ CREATE TABLE assessment(
 
 _CREATE_VULNERABILITY_TABLE_QUERY = """
 CREATE TABLE vulnerability(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY,
     id_assessment INTEGER,
     id_request INTEGER,
     type TEXT,
