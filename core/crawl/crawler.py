@@ -42,6 +42,8 @@ from core.lib.utils import get_program_infos, getrealdir, print_progressbar, std
     get_phantomjs_cmd, normalize_url, cmd_to_str, generate_filename
 
 
+# TODO: clean the exception handling (no more `except Exception:`)
+# see: http://stackoverflow.com/questions/2052390/manually-raising-throwing-an-exception-in-python
 class Crawler:
     def __init__(self, argv):
 
@@ -400,17 +402,17 @@ Options:
         # get database
         try:
             database = self._get_database(outfile_name, output_mode)
+
+            crawl_id = database.save_crawl_info(
+                htcap_version=get_program_infos()['version'],
+                target=Shared.starturl,
+                start_date=self.crawl_start_date,
+                commandline=cmd_to_str(argv),
+                user_agent=Shared.options['useragent']
+            )
         except Exception as e:
             print(str(e))
             sys.exit(1)
-
-        crawl_id = database.save_crawl_info(
-            htcap_version=get_program_infos()['version'],
-            target=Shared.starturl,
-            start_date=self.crawl_start_date,
-            commandline=cmd_to_str(argv),
-            user_agent=Shared.options['useragent']
-        )
 
         start_requests = []
 
@@ -580,8 +582,7 @@ Options:
             for t in tok:
                 k, v = t.split("=", 1)
                 cookies.append({"name": k.strip(), "value": unquote(v.strip())})
-        except Exception as e:
-            print(str(e))
+        except:
             raise
 
         return cookies
