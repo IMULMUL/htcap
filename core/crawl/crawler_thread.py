@@ -200,7 +200,7 @@ class CrawlerThread(threading.Thread):
                     continue
                 try:
                     hr = HttpGet(request, Shared.options['process_timeout'], self.process_retries,
-                                 Shared.options['useragent'], Shared.options['proxy'])
+                                 Shared.options['user_agent'], Shared.options['proxy'])
                     requests = hr.get_requests()
                 except Exception as e:
                     errors.append(str(e))

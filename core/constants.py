@@ -44,3 +44,24 @@ ERROR_MAXREDIRECTS = "too_many_redirects"
 ERROR_CRAWLDEPTH = "crawler_depth_limit_reached"
 VULNTYPE_SQLI = "sqli"
 VULNTYPE_XSS = "xss"
+
+CRAWLER_DEFAULTS = {
+    "process_timeout": 300,  # when lots of element(~25000) are added dynamically it can take some time..
+    "num_threads": 10,
+    "max_redirects": 10,
+    "max_depth": 100,
+    "max_post_depth": 10,
+    "output_mode": CRAWLOUTPUT_RENAME,
+    "scope": CRAWLSCOPE_DOMAIN,
+    "mode": CRAWLMODE_AGGRESSIVE,
+    "proxy": None,
+    "group_qs": False,
+    "user_agent": 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 '
+                  '(KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36',
+    "save_html": False,
+    "override_timeout_functions": True,
+    "crawl_forms": True,  # only if mode == CRAWLMODE_AGGRESSIVE
+    "random_seed": "",
+    "use_urllib_onerror": True,
+    "set_referer": True,
+}

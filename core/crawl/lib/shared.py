@@ -26,7 +26,7 @@ class Shared:
     requests_index = 0
     crawl_results = []
 
-    starturl = ""
+    start_url = ""
     start_cookies = []
     allowed_domains = set()
     excluded_urls = set()
