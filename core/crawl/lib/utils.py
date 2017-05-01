@@ -22,7 +22,7 @@ from core.lib.utils import group_qs_params
 def request_in_scope(request):
     url = request.url
     purl = urlsplit(url)
-    spurl = urlsplit(Shared.starturl)
+    spurl = urlsplit(Shared.start_url)
     scope = Shared.options['scope']
     in_scope = False
 
@@ -42,7 +42,7 @@ def request_in_scope(request):
             in_scope = path[:len(spath)] == spath
 
     elif scope == CRAWLSCOPE_URL:
-        in_scope = url == Shared.starturl
+        in_scope = url == Shared.start_url
 
     # check for excluded urls
     for pattern in Shared.excluded_urls:

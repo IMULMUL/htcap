@@ -9,7 +9,6 @@ the terms of the GNU General Public License as published by the Free Software
 Foundation; either version 2 of the License, or (at your option) any later 
 version.
 """
-
 import json
 import sqlite3
 
@@ -71,62 +70,50 @@ class Database:
         cur.execute(_CREATE_ASSESSMENT_TABLE_QUERY)
         cur.execute(_CREATE_VULNERABILITY_TABLE_QUERY)
 
-        cur.execute("INSERT INTO crawl_info VALUES (NULL, NULL, NULL, NULL, NULL, NULL)")
-
         self.commit()
         self.close()
 
     def save_crawl_info(self,
-                        htcap_version=None, target=None, start_date=None, end_date=None, commandline=None,
-                        user_agent=None):
+                        htcap_version="NULL", target="NULL", start_date="NULL", commandline="NULL",
+                        user_agent="NULL"):
         """
         connect, save the provided crawl info then close the connection
     
         :param htcap_version: version of the running instance of htcap
         :param target: start url of the crawl
         :param start_date: start date of the crawl
-        :param end_date:  end date of the crawl
         :param commandline: parameter given to htcap for the crawl
         :param user_agent: user defined agent
+        :return: the id of the crawl
         """
-        values = []
-        pars = []
+        values = [htcap_version, target, start_date, None, commandline, user_agent, None]
 
-        if htcap_version:
-            pars.append("htcap_version=?")
-            values.append(htcap_version)
+        insert_query = "INSERT INTO crawl_info VALUES (?,?,?,?,?,?,?)"
 
-        if target:
-            pars.append("target=?")
-            values.append(target)
+        self.connect()
+        cur = self.conn.cursor()
+        cur.execute(insert_query, values)
+        cur.execute("SELECT last_insert_rowid() AS id")  # retrieve its id
+        crawl_id = cur.fetchone()['id']
+        self.commit()
+        self.close()
 
-        if start_date:
-            pars.append("start_date=?")
-            values.append(start_date)
+        return crawl_id
 
-        if end_date:
-            pars.append("end_date=?")
-            values.append(end_date)
+    def update_crawl_info(self, crawl_id, crawl_end_date, random_seed):
+        """
+        connect, save the end date then close the connection
+        :param crawl_id: 
+        :param crawl_end_date: 
+        :param random_seed:
+        """
+        update_crawl_query = "UPDATE crawl_info SET end_date = ?, random_seed = ? WHERE rowid = ?"
 
-        if commandline:
-            pars.append("commandline=?")
-            values.append(commandline)
-
-        if user_agent:
-            pars.append("user_agent=?")
-            values.append(user_agent)
-
-        qry = "UPDATE crawl_info SET %s" % ", ".join(pars)
-
-        try:
-            self.connect()
-            cur = self.conn.cursor()
-            cur.execute(qry, values)
-            self.commit()
-            self.close()
-
-        except Exception as e:
-            print(str(e))
+        self.connect()
+        cur = self.conn.cursor()
+        cur.execute(update_crawl_query, [crawl_end_date, random_seed, crawl_id])
+        self.commit()
+        self.close()
 
     def save_request(self, request):
         """
@@ -169,27 +156,23 @@ class Database:
         # (normally requests are compared using type,method,url and data only)
         select_query = "SELECT * FROM request WHERE type=? AND method=? AND url=? AND http_auth=? AND data=? AND trigger=?"
 
-        try:
-            cur = self.conn.cursor()
-            cur.execute(select_query, select_values)
-            existing_req = cur.fetchone()
+        cur = self.conn.cursor()
+        cur.execute(select_query, select_values)
+        existing_req = cur.fetchone()
 
-            if not existing_req:  # if no existing request
-                cur.execute(insert_query, insert_values)  # insert the new request
-                cur.execute("SELECT last_insert_rowid() AS id")  # retrieve its id
-                request.db_id = cur.fetchone()['id']  # complete the request with the db_id
-            else:
-                request.db_id = existing_req['id']  # set the db_id for the request
+        if not existing_req:  # if no existing request
+            cur.execute(insert_query, insert_values)  # insert the new request
+            cur.execute("SELECT last_insert_rowid() AS id")  # retrieve its id
+            request.db_id = cur.fetchone()['id']  # complete the request with the db_id
+        else:
+            request.db_id = existing_req['id']  # set the db_id for the request
 
-            req_id = request.db_id
+        req_id = request.db_id
 
-            # set the parent-child relationships
-            if request.parent_db_id:
-                qry_child = "INSERT INTO request_child (id_request, id_child) VALUES (?,?)"
-                cur.execute(qry_child, (request.parent_db_id, req_id))
-
-        except Exception as e:
-            print(str(e))
+        # set the parent-child relationships
+        if request.parent_db_id:
+            qry_child = "INSERT INTO request_child (id_request, id_child) VALUES (?,?)"
+            cur.execute(qry_child, (request.parent_db_id, req_id))
 
     def save_crawl_result(self, result, crawled):
         """
@@ -207,11 +190,8 @@ class Database:
             result.request.db_id
         )
 
-        try:
-            cur = self.conn.cursor()
-            cur.execute(qry, values)
-        except Exception as e:
-            print(str(e))
+        cur = self.conn.cursor()
+        cur.execute(qry, values)
 
     def make_request_crawlable(self, request):
         """
@@ -237,20 +217,18 @@ class Database:
         types = types.split(",")
         ret = []
         qry = "SELECT * FROM request WHERE out_of_scope=0 AND type IN (%s)" % ",".join("?" * len(types))
-        try:
-            self.connect()
-            cur = self.conn.cursor()
-            cur.execute(qry, types)
-            for r in cur.fetchall():
-                # !! parent must be null (or unset)
-                req = Request(
-                    r['type'], r['method'], r['url'], referer=r['referer'], data=r['data'],
-                    json_cookies=r['cookies'], db_id=r['id'], parent_db_id=r['id_parent']
-                )
-                ret.append(req)
-            self.close()
-        except Exception as e:
-            print(str(e))
+
+        self.connect()
+        cur = self.conn.cursor()
+        cur.execute(qry, types)
+        for r in cur.fetchall():
+            # !! parent must be null (or unset)
+            req = Request(
+                r['type'], r['method'], r['url'], referer=r['referer'], data=r['data'],
+                json_cookies=r['cookies'], db_id=r['id'], parent_db_id=r['id_parent']
+            )
+            ret.append(req)
+        self.close()
 
         return ret
 
@@ -263,19 +241,17 @@ class Database:
         """
 
         qry = "INSERT INTO assessment (scanner, start_date) VALUES (?,?)"
-        try:
-            self.connect()
 
-            cur = self.conn.cursor()
+        self.connect()
 
-            cur.execute(qry, (scanner, date))
-            cur.execute("SELECT last_insert_rowid() as id")
-            id = cur.fetchone()['id']
-            self.commit()
-            self.close()
-            return id
-        except Exception as e:
-            print(str(e))
+        cur = self.conn.cursor()
+
+        cur.execute(qry, (scanner, date))
+        cur.execute("SELECT last_insert_rowid() as id")
+        id = cur.fetchone()['id']
+        self.commit()
+        self.close()
+        return id
 
     def save_assessment(self, id_assessment, end_date):
         """
@@ -285,14 +261,12 @@ class Database:
         :param end_date:
         """
         qry = "UPDATE assessment SET end_date=? WHERE id=?"
-        try:
-            self.connect()
-            cur = self.conn.cursor()
-            cur.execute(qry, (end_date, id_assessment))
-            self.commit()
-            self.close()
-        except Exception as e:
-            print(str(e))
+
+        self.connect()
+        cur = self.conn.cursor()
+        cur.execute(qry, (end_date, id_assessment))
+        self.commit()
+        self.close()
 
     def insert_vulnerability(self, id_assessment, id_request, type, description, error=""):
         """
@@ -305,17 +279,14 @@ class Database:
         :param error: default=""
         """
         qry = "INSERT INTO vulnerability (id_assessment, id_request, type, description, error) VALUES (?,?,?,?,?)"
-        try:
-            self.connect()
 
-            cur = self.conn.cursor()
+        self.connect()
 
-            cur.execute(qry, (id_assessment, id_request, type, description, error))
-            self.commit()
-            self.close()
+        cur = self.conn.cursor()
 
-        except Exception as e:
-            print(str(e))
+        cur.execute(qry, (id_assessment, id_request, type, description, error))
+        self.commit()
+        self.close()
 
     def get_crawled_request(self):
         """
@@ -359,6 +330,22 @@ class Database:
 
         return requests
 
+    def retrieve_crawl_options(self, crawl_id):
+        """
+        return the options stored for the given crawl
+        :param crawl_id: 
+        :return: random_seed
+        """
+        query = "SELECT random_seed FROM crawl_info WHERE rowid=?"
+
+        self.connect()
+        cur = self.conn.cursor()
+        cur.execute(query, [crawl_id])
+        options = cur.fetchone()
+        self.close()
+
+        return options["random_seed"]
+
 
 _CREATE_CRAWL_INFO_TABLE_QUERY = """
 CREATE TABLE crawl_info (
@@ -367,13 +354,14 @@ CREATE TABLE crawl_info (
     start_date INTEGER,
     end_date INTEGER,
     commandline TEXT,
-    user_agent TEXT
+    user_agent TEXT,
+    random_seed TEXT
 )
 """
 
 _CREATE_REQUEST_TABLE_QUERY = """
 CREATE TABLE request (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY,
     id_parent INTEGER,
     type TEXT,
     method TEXT,
@@ -398,7 +386,7 @@ CREATE INDEX request_index ON request (type, method, url, http_auth, data, trigg
 
 _CREATE_REQUEST_CHILD_TABLE_QUERY = """
 CREATE TABLE request_child (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY,
     id_request INTEGER NOT NULL,
     id_child INTEGER NOT NULL
 )
@@ -410,7 +398,7 @@ CREATE INDEX request_child_index ON request_child (id_request, id_child)
 
 _CREATE_ASSESSMENT_TABLE_QUERY = """
 CREATE TABLE assessment(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY,
     scanner TEXT,
     start_date INTEGER,
     end_date INTEGER
@@ -419,7 +407,7 @@ CREATE TABLE assessment(
 
 _CREATE_VULNERABILITY_TABLE_QUERY = """
 CREATE TABLE vulnerability(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY,
     id_assessment INTEGER,
     id_request INTEGER,
     type TEXT,

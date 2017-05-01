@@ -28,13 +28,13 @@ from core.lib.thirdparty.pysocks.sockshandler import SocksiPyHandler
 
 
 class HttpGet:
-    def __init__(self, request, timeout, retries=None, useragent=None, proxy=None):
+    def __init__(self, request, timeout, retries=None, user_agent=None, proxy=None):
         self.request = request
         self.timeout = timeout
         self.retries = retries if retries else 1
         self.proxy = proxy
         self.retries_interval = 0.5
-        self.useragent = useragent
+        self.user_agent = user_agent
 
     def urllib2_opener(self, request, jar_response, follow_redirect=None):
         url = request.url
@@ -66,8 +66,8 @@ class HttpGet:
                     httproxy = urllib2.ProxyHandler({'http': proxy_string, 'https': proxy_string})
                     handlers.append(httproxy)
 
-            if self.useragent:
-                headers.append(('User-agent', self.useragent))
+            if self.user_agent:
+                headers.append(('User-agent', self.user_agent))
 
             if request.http_auth:
                 auths = base64.b64encode(request.http_auth)
