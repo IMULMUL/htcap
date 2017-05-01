@@ -96,9 +96,9 @@ class DatabaseTest(DatabaseTestCase):
         self.assertEqual(
             self.cursor_mock.execute.call_args_list[0],
             call(
-                "INSERT INTO crawl_info VALUES (?,?,?,?,?,?,?)",
-                ["42.0", "my target", "my start date", None,
-                 "my commandline", "some user agent", None]))
+                "INSERT INTO crawl_info (htcap_version,target,start_date,commandline,user_agent) VALUES (?,?,?,?,?)",
+                ["42.0", "my target", "my start date",
+                 "my commandline", "some user agent"]))
         self.assertEqual(
             self.cursor_mock.execute.call_args_list[1],
             call(

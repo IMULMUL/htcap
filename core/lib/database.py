@@ -86,9 +86,9 @@ class Database:
         :param user_agent: user defined agent
         :return: the id of the crawl
         """
-        values = [htcap_version, target, start_date, None, commandline, user_agent, None]
+        values = [htcap_version, target, start_date, commandline, user_agent]
 
-        insert_query = "INSERT INTO crawl_info VALUES (?,?,?,?,?,?,?)"
+        insert_query = "INSERT INTO crawl_info (htcap_version,target,start_date,commandline,user_agent) VALUES (?,?,?,?,?)"
 
         self.connect()
         cur = self.conn.cursor()
