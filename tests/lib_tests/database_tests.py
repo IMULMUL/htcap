@@ -96,9 +96,9 @@ class DatabaseTest(DatabaseTestCase):
         self.assertEqual(
             self.cursor_mock.execute.call_args_list[0],
             call(
-                "INSERT INTO crawl_info VALUES (?,?,?,?,?,?)",
+                "INSERT INTO crawl_info VALUES (?,?,?,?,?,?,?)",
                 ["42.0", "my target", "my start date", None,
-                 "my commandline", "some user agent"]))
+                 "my commandline", "some user agent", None]))
         self.assertEqual(
             self.cursor_mock.execute.call_args_list[1],
             call(
@@ -109,13 +109,13 @@ class DatabaseTest(DatabaseTestCase):
         self.close_method_mock.assert_called_once()
         self.assertEqual(result, 42)
 
-    def test_update_crawl_end_date(self):
-        self.db.update_crawl_end_date(53, "some end date")
+    def test_update_crawl_info(self):
+        self.db.update_crawl_info(53, "some end date", "my random seed")
 
         self.connect_method_mock.assert_called_once()
         self.cursor_mock.execute.assert_called_once_with(
-            "UPDATE crawl_info SET end_date = ? WHERE rowid = ?",
-            ["some end date", 53])
+            "UPDATE crawl_info SET end_date = ?, random_seed = ? WHERE rowid = ?",
+            ["some end date", "my random seed", 53])
         self.commit_method_mock.assert_called_once()
         self.close_method_mock.assert_called_once()
 
@@ -379,3 +379,15 @@ class DatabaseTest(DatabaseTestCase):
         )
         self.close_method_mock.assert_called_once()
         self.assertEqual(len(results), 1)
+
+    def test_retrieve_crawl_options(self):
+        self.cursor_mock.fetchone.return_value = {"random_seed": "my seed"}
+
+        results = self.db.retrieve_crawl_options(42)
+
+        self.connect_method_mock.assert_called_once()
+        self.cursor_mock.execute.assert_called_once_with(
+            "SELECT random_seed FROM crawl_info WHERE rowid=?", [42]
+        )
+        self.close_method_mock.assert_called_once()
+        self.assertEqual(results, "my seed")

@@ -303,19 +303,20 @@ Options:
                 commandline=cmd_to_str(argv),
                 user_agent=Shared.options['user_agent']
             )
+
             # if the current crawl is not the first one
-            # if crawl_id > 1:
-            #
-            #     # retrieving options from the last crawl
-            #     cookies, random_seed = database.retrieve_crawl_options(crawl_id - 1)
-            #
-            #     # if no cookie were provided and some exist from last crawl
-            #     if len(Shared.start_cookies) <= 0 and len(cookies) >= 1:
-            #         pass
-            #
-            #     Shared.options["random_seed"] = random_seed
-            # else:
-            Shared.options["random_seed"] = self._generate_random_string(20)
+            if crawl_id > 1:
+
+                # retrieving options from the last crawl
+                random_seed = database.retrieve_crawl_options(crawl_id - 1)
+
+                # if no cookie were provided and some exist from last crawl
+                # if len(Shared.start_cookies) <= 0 and len(cookies) >= 1:
+                #     pass
+
+                Shared.options["random_seed"] = random_seed
+            else:
+                Shared.options["random_seed"] = self._generate_random_string(20)
 
         except Exception as e:
             print(str(e))
@@ -419,7 +420,7 @@ Options:
             Shared.requests_index, (self.crawl_end_date - self.crawl_start_date) / 60))
 
         # update end date in db
-        database.update_crawl_end_date(crawl_id, self.crawl_end_date)
+        database.update_crawl_info(crawl_id, self.crawl_end_date, Shared.options["random_seed"])
 
     def _main_loop(self, threads, start_requests, database, display_progress=True, verbose=False):
         pending = len(start_requests)

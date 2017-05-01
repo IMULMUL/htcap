@@ -9,7 +9,6 @@ the terms of the GNU General Public License as published by the Free Software
 Foundation; either version 2 of the License, or (at your option) any later 
 version.
 """
-
 import json
 import sqlite3
 
@@ -87,9 +86,9 @@ class Database:
         :param user_agent: user defined agent
         :return: the id of the crawl
         """
-        values = [htcap_version, target, start_date, None, commandline, user_agent]
+        values = [htcap_version, target, start_date, None, commandline, user_agent, None]
 
-        insert_query = "INSERT INTO crawl_info VALUES (?,?,?,?,?,?)"
+        insert_query = "INSERT INTO crawl_info VALUES (?,?,?,?,?,?,?)"
 
         self.connect()
         cur = self.conn.cursor()
@@ -101,17 +100,18 @@ class Database:
 
         return crawl_id
 
-    def update_crawl_end_date(self, crawl_id, crawl_end_date):
+    def update_crawl_info(self, crawl_id, crawl_end_date, random_seed):
         """
         connect, save the end date then close the connection
         :param crawl_id: 
         :param crawl_end_date: 
+        :param random_seed:
         """
-        update_crawl_query = "UPDATE crawl_info SET end_date = ? WHERE rowid = ?"
+        update_crawl_query = "UPDATE crawl_info SET end_date = ?, random_seed = ? WHERE rowid = ?"
 
         self.connect()
         cur = self.conn.cursor()
-        cur.execute(update_crawl_query, [crawl_end_date, crawl_id])
+        cur.execute(update_crawl_query, [crawl_end_date, random_seed, crawl_id])
         self.commit()
         self.close()
 
@@ -330,6 +330,22 @@ class Database:
 
         return requests
 
+    def retrieve_crawl_options(self, crawl_id):
+        """
+        return the options stored for the given crawl
+        :param crawl_id: 
+        :return: random_seed
+        """
+        query = "SELECT random_seed FROM crawl_info WHERE rowid=?"
+
+        self.connect()
+        cur = self.conn.cursor()
+        cur.execute(query, [crawl_id])
+        options = cur.fetchone()
+        self.close()
+
+        return options["random_seed"]
+
 
 _CREATE_CRAWL_INFO_TABLE_QUERY = """
 CREATE TABLE crawl_info (
@@ -338,7 +354,8 @@ CREATE TABLE crawl_info (
     start_date INTEGER,
     end_date INTEGER,
     commandline TEXT,
-    user_agent TEXT
+    user_agent TEXT,
+    random_seed TEXT
 )
 """
 
