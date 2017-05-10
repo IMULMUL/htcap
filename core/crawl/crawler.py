@@ -265,8 +265,8 @@ Options:
             try:
 
                 start_cookies = self._parse_cookie_string(cookie_string)
-                for cookie_string in start_cookies:
-                    Shared.start_cookies.append(Cookie(cookie_string, Shared.start_url))
+                for cookie in start_cookies:
+                    Shared.start_cookies.append(Cookie(cookie, Shared.start_url))
 
             except Exception as e:
                 print("error decoding cookie string: {}".format(str(e)))
