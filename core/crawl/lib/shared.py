@@ -28,6 +28,7 @@ class Shared:
 
     start_url = ""
     start_cookies = []
+    end_cookies = []
     allowed_domains = set()
     excluded_urls = set()
 
