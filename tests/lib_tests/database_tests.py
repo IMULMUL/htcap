@@ -87,18 +87,22 @@ class DatabaseTest(DatabaseTestCase):
     def test_save_crawl_info(self):
         self.cursor_mock.fetchone.return_value = {"id": 42}
 
+        cookie_mock = MagicMock()
+        cookie_mock.get_dict = MagicMock(return_value="some cookie")
+
         result = self.db.save_crawl_info(
             htcap_version="42.0", target="my target", start_date="my start date",
-            commandline="my commandline", user_agent="some user agent"
+            commandline="my commandline", user_agent="some user agent", start_cookies=[cookie_mock, cookie_mock]
         )
 
         self.connect_method_mock.assert_called_once()
+        self.assertEqual(cookie_mock.get_dict.call_count, 2)
         self.assertEqual(
             self.cursor_mock.execute.call_args_list[0],
             call(
-                "INSERT INTO crawl_info (htcap_version,target,start_date,commandline,user_agent) VALUES (?,?,?,?,?)",
+                "INSERT INTO crawl_info (htcap_version,target,start_date,commandline,user_agent,start_cookies) VALUES (?,?,?,?,?,?)",
                 ["42.0", "my target", "my start date",
-                 "my commandline", "some user agent"]))
+                 "my commandline", "some user agent", '["some cookie", "some cookie"]']))
         self.assertEqual(
             self.cursor_mock.execute.call_args_list[1],
             call(
@@ -110,12 +114,16 @@ class DatabaseTest(DatabaseTestCase):
         self.assertEqual(result, 42)
 
     def test_update_crawl_info(self):
-        self.db.update_crawl_info(53, "some end date", "my random seed")
+        cookie_mock = MagicMock()
+        cookie_mock.get_dict = MagicMock(return_value="some cookie")
+
+        self.db.update_crawl_info(53, "some end date", "my random seed", [cookie_mock, cookie_mock])
 
         self.connect_method_mock.assert_called_once()
+        self.assertEqual(cookie_mock.get_dict.call_count, 2)
         self.cursor_mock.execute.assert_called_once_with(
-            "UPDATE crawl_info SET end_date = ?, random_seed = ? WHERE rowid = ?",
-            ["some end date", "my random seed", 53])
+            "UPDATE crawl_info SET end_date = ?, random_seed = ?, end_cookies = ? WHERE rowid = ?",
+            ["some end date", "my random seed", '["some cookie", "some cookie"]', 53])
         self.commit_method_mock.assert_called_once()
         self.close_method_mock.assert_called_once()
 
@@ -381,13 +389,13 @@ class DatabaseTest(DatabaseTestCase):
         self.assertEqual(len(results), 1)
 
     def test_retrieve_crawl_options(self):
-        self.cursor_mock.fetchone.return_value = {"random_seed": "my seed"}
+        self.cursor_mock.fetchone.return_value = {"random_seed": "my seed", "end_cookies": "my end cookies"}
 
-        results = self.db.retrieve_crawl_options(42)
+        results = self.db.retrieve_crawl_info(42)
 
         self.connect_method_mock.assert_called_once()
         self.cursor_mock.execute.assert_called_once_with(
-            "SELECT random_seed FROM crawl_info WHERE rowid=?", [42]
+            "SELECT random_seed, end_cookies FROM crawl_info WHERE rowid=?", [42]
         )
         self.close_method_mock.assert_called_once()
-        self.assertEqual(results, "my seed")
+        self.assertEqual(results, ("my seed", "my end cookies"))

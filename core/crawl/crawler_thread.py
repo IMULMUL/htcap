@@ -193,6 +193,10 @@ class CrawlerThread(threading.Thread):
                     if len(probe.user_output) > 0:
                         request.user_output = probe.user_output
 
+                    # if the probe return some cookies set it has the last one
+                    if probe.cookies:
+                        Shared.end_cookies = probe.cookies
+
             else:
                 errors.append(ERROR_PROBEFAILURE)
                 # get urls with python to continue crawling
