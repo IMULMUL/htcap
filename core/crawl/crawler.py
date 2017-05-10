@@ -139,7 +139,6 @@ Options:
         Shared.main_condition = threading.Condition()
 
         # initialize crawl config
-        start_cookies = []
         start_referer = None
 
         threads = []
@@ -264,13 +263,14 @@ Options:
         # initialize cookies
         if cookie_string:
             try:
+
                 start_cookies = self._parse_cookie_string(cookie_string)
+                for cookie_string in start_cookies:
+                    Shared.start_cookies.append(Cookie(cookie_string, Shared.start_url))
+
             except Exception as e:
                 print("error decoding cookie string: {}".format(str(e)))
                 sys.exit(1)
-
-        for cookie_string in start_cookies:
-            Shared.start_cookies.append(Cookie(cookie_string, Shared.start_url))
 
         # retrieve start url and output file arguments
         Shared.start_url = normalize_url(args[0])
@@ -311,12 +311,16 @@ Options:
                 # retrieving options from the last crawl
                 random_seed, cookies = database.retrieve_crawl_info(crawl_id - 1)
 
+                if random_seed:
+                    Shared.options["random_seed"] = random_seed
+                else:
+                    Shared.options["random_seed"] = self._generate_random_string(20)
+
                 # if no cookie was provided and some exist from the last crawl
-                if len(Shared.start_cookies) <= 0 and cookies != "[]":
+                if len(Shared.start_cookies) <= 0 and cookies != "[]" and cookies is not None:
                     for cookie_string in self._parse_cookie_string(cookies):
                         Shared.start_cookies.append(Cookie(cookie_string))
 
-                Shared.options["random_seed"] = random_seed
             else:
                 Shared.options["random_seed"] = self._generate_random_string(20)
 
