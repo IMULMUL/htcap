@@ -44,6 +44,12 @@ from core.lib.utils import get_program_infos, getrealdir, print_progressbar, std
 
 # TODO: clean the exception handling (no more `except Exception:`)
 # see: http://stackoverflow.com/questions/2052390/manually-raising-throwing-an-exception-in-python
+
+# TODO: using argparse instead of custom handling of options https://docs.python.org/3.5/howto/argparse.html
+
+# TODO: replace print() by logger.info()/logger.warning()
+
+
 class Crawler:
     def __init__(self, argv):
 
@@ -159,7 +165,6 @@ Options:
             sys.exit(1)
 
         # retrieving user arguments
-        # TODO: using argparse instead https://docs.python.org/3.5/howto/argparse.html
         try:
             opts, args = getopt.getopt(argv, 'ho:qvm:s:D:P:FHd:c:C:r:x:p:n:A:U:t:u:SGNR:IOK')
         except getopt.GetoptError as err:

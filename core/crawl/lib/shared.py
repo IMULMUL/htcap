@@ -11,6 +11,8 @@ version.
 """
 
 
+# TODO: make sure that only shared data are stored in this object
+
 class Shared:
     """
     data shared between threads

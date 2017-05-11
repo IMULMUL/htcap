@@ -8,6 +8,8 @@
  version.
  */
 
+// TODO: stop using console.log() to transmit data to crawler thread
+
 var system = require('system');
 var fs = require('fs');
 var page = require('webpage').create();

@@ -29,6 +29,8 @@ from core.lib.http_get import HttpGet
 from core.lib.shell import CommandExecutor
 
 
+# TODO: use NamedTemporaryFile for self._cookie_file
+
 class CrawlerThread(threading.Thread):
     _PROCESS_RETRIES_INTERVAL = 0.5
     _PROCESS_RETRIES = 2
