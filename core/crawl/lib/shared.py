@@ -32,4 +32,6 @@ class Shared:
     allowed_domains = set()
     excluded_urls = set()
 
+    probe_cmd = []
+
     options = {}
