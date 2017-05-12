@@ -247,8 +247,7 @@
         Probe.prototype.EventLoopManager.prototype.doNextAction = function () {
 
             // DEBUG:
-            // avoiding noise
-            if (this._sentXHRQueue.length <= 0) {
+            if (this._sentXHRQueue.length <= 0) {            // avoiding noise
                 console.log('eventLoop doNextAction - done:', this._doneXHRQueue.length,
                     ', DOM:', this._DOMAssessmentQueue.length,
                     ', event:', this._toBeTriggeredEventsQueue.length
@@ -327,9 +326,15 @@
                         }
                     }
                 } else if (mutationRecord.type === 'attributes') {
+                    var element = mutationRecord.target;
                     // DEBUG:
-                    // console.log('eventLoop nodeMutated: attributes', mutationRecord.attributeName, mutationRecord.target[mutationRecord.attributeName]);
-                    this.scheduleDOMAssessment(mutationRecord.target);
+                    // console.log('eventLoop nodeMutated: attributes', _elementToString(element), mutationRecord.attributeName);
+                    this._probe._triggeredPageEvents.forEach(function (pageEvent, index) {
+                        if (pageEvent.element === element) {
+                            this._probe._triggeredPageEvents.splice(index, 1);
+                        }
+                    }.bind(this));
+                    this.scheduleDOMAssessment(element);
 
                 }
             }.bind(this));
@@ -712,7 +717,7 @@
         };
 
         /**
-         * Trigger all event for a given element
+         * Request trigger all event for a given element
          * @param {Element} element
          * @private
          */

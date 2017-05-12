@@ -457,19 +457,19 @@ function startProbe(random, injectScript) {
             Node.prototype.appendChild = function (node) {
                 window.__PROBE__.printJSONP(node);
                 return this.__originalAppendChild(node);
-            }
+            };
 
             Node.prototype.__originalInsertBefore = Node.prototype.insertBefore;
             Node.prototype.insertBefore = function (node, element) {
                 window.__PROBE__.printJSONP(node);
                 return this.__originalInsertBefore(node, element);
-            }
+            };
 
             Node.prototype.__originalReplaceChild = Node.prototype.replaceChild;
             Node.prototype.replaceChild = function (node, oldNode) {
                 window.__PROBE__.printJSONP(node);
                 return this.__originalReplaceChild(node, oldNode);
-            }
+            };
         }
 
         if (options.checkWebsockets) {
@@ -502,7 +502,7 @@ function startProbe(random, injectScript) {
             Node.prototype.__originalRemoveChild = Node.prototype.removeChild;
             Node.prototype.removeChild = function (node) {
                 return node;
-            }
+            };
         }
 
         HTMLFormElement.prototype.__originalSubmit = HTMLFormElement.prototype.submit;
@@ -533,7 +533,6 @@ function startProbe(random, injectScript) {
             attributes: true,
             characterData: false,
             subtree: true,
-            attributeOldValue: true,
             characterDataOldValue: false,
             attributeFilter: eventAttributeList
         });
