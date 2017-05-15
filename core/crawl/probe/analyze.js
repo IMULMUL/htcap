@@ -33,6 +33,7 @@ var args = getopt(system.args, "hVaftUJdICc:MSEp:Tsx:A:r:mHX:PD:R:Oi:u:v");
 parseArgsToOptions(args, window.options, page_settings);
 
 window.site = parseArgsToURL(args);
+window.result_file = parseArgsToResultFilePath(args);
 
 console.log("[");
 
@@ -167,6 +168,8 @@ page.onCallback = function (data) {
             });
 
             printStatus("ok", window.response.contentType);
+
+            fs.write(window.result_file, 'hello world, it works!', 'w');
             phantom.exit(0);
             break;
 

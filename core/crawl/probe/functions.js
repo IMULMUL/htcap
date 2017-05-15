@@ -90,7 +90,7 @@ function execTimedOut() {
 
 
 function usage() {
-    var usage = ["Usage: analyze.js [options] <url>",
+    var usage = ["Usage: analyze.js [options] <url> <result_file_path>",
         "  -V              verbose",
         "  -a              don't check ajax",
         "  -f              don't fill values",
@@ -237,6 +237,17 @@ function parseArgsToURL(args) {
     }
 
     return url;
+}
+
+function parseArgsToResultFilePath(args) {
+    var path = args.args[2];
+
+    if (typeof  path !== "string") {
+        usage();
+        phantom.exit(-1);
+    }
+
+    return path;
 }
 
 function onNavigationRequested(url, type) {

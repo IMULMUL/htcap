@@ -40,6 +40,7 @@ class CrawlerThread(threading.Thread):
 
         self._thread_uuid = uuid.uuid4()
         self._cookie_file = NamedTemporaryFile(prefix="htcap_cookie_file-", suffix=".json")
+        self._result_file = NamedTemporaryFile(prefix="htcap_result_file-", suffix=".json")
 
     def run(self):
         self._crawl()
@@ -54,6 +55,7 @@ class CrawlerThread(threading.Thread):
                 request = self._wait_request()
             except ThreadExitRequestException:
                 self._cookie_file.close()
+                self._result_file.close()
                 return
             except Exception as e:
                 print("-->" + str(e))
@@ -152,7 +154,6 @@ class CrawlerThread(threading.Thread):
             for cookie in request.cookies:
                 cookies.append(cookie.get_dict())
 
-            print(json.dumps(cookies))
             self._cookie_file.write(json.dumps(cookies))
             self._cookie_file.flush()
 
@@ -167,11 +168,14 @@ class CrawlerThread(threading.Thread):
         params.extend(("-i", str(request.db_id)))
 
         params.append(url)
+        params.append(self._result_file.name)
 
         while retries:
 
             cmd = CommandExecutor(Shared.probe_cmd + params)
             jsn = cmd.execute(Shared.options['process_timeout'] + 2)
+
+            print(self._result_file.read())
 
             if jsn is None:
                 errors.appnd(ERROR_PROBEKILLED)
