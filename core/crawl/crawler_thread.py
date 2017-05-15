@@ -13,10 +13,9 @@ version.
 from __future__ import unicode_literals
 
 import json
-import os
-import tempfile
 import threading
 import uuid
+from tempfile import NamedTemporaryFile
 from time import sleep
 
 from core.constants import *
@@ -29,8 +28,6 @@ from core.lib.http_get import HttpGet
 from core.lib.shell import CommandExecutor
 
 
-# TODO: use NamedTemporaryFile for self._cookie_file
-
 class CrawlerThread(threading.Thread):
     _PROCESS_RETRIES_INTERVAL = 0.5
     _PROCESS_RETRIES = 2
@@ -42,7 +39,7 @@ class CrawlerThread(threading.Thread):
         self.exit = False
 
         self._thread_uuid = uuid.uuid4()
-        self._cookie_file = "%s%shtcap_cookiefile-%s.json" % (tempfile.gettempdir(), os.sep, self._thread_uuid)
+        self._cookie_file = NamedTemporaryFile(prefix="htcap_cookie_file-", suffix=".json")
 
     def run(self):
         self._crawl()
@@ -56,8 +53,7 @@ class CrawlerThread(threading.Thread):
             try:
                 request = self._wait_request()
             except ThreadExitRequestException:
-                if os.path.exists(self._cookie_file):
-                    os.remove(self._cookie_file)
+                self._cookie_file.close()
                 return
             except Exception as e:
                 print("-->" + str(e))
@@ -135,8 +131,8 @@ class CrawlerThread(threading.Thread):
             jsn += '{"status":"ok", "partialcontent":true}]'
         try:
             return json.loads(jsn)
-        except Exception:
-            # print "-- JSON DECODE ERROR %s" % jsn
+        except Exception as e:
+            print ("-- %s | %s" % (e, jsn))
             raise
 
     def _send_probe(self, request, errors):
@@ -156,10 +152,11 @@ class CrawlerThread(threading.Thread):
             for cookie in request.cookies:
                 cookies.append(cookie.get_dict())
 
-            with open(self._cookie_file, 'w') as fil:
-                fil.write(json.dumps(cookies))
+            print(json.dumps(cookies))
+            self._cookie_file.write(json.dumps(cookies))
+            self._cookie_file.flush()
 
-            params.extend(("-c", self._cookie_file))
+            params.extend(("-c", self._cookie_file.name))
 
         if request.http_auth:
             params.extend(("-p", request.http_auth))
@@ -173,8 +170,6 @@ class CrawlerThread(threading.Thread):
 
         while retries:
 
-            # print cmd_to_str(Shared.probe_cmd + params)
-
             cmd = CommandExecutor(Shared.probe_cmd + params)
             jsn = cmd.execute(Shared.options['process_timeout'] + 2)
 
@@ -187,6 +182,7 @@ class CrawlerThread(threading.Thread):
             # try to decode json also after an exception .. sometimes phantom crashes BUT returns a valid json ..
             if jsn and type(jsn) is not str:
                 jsn = jsn[0]
+
             probe_array = self._load_probe_json(jsn)
 
             if probe_array:
