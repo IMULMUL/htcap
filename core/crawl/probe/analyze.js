@@ -24,64 +24,29 @@ phantom.injectJs("constants.js");
 phantom.injectJs("probe.js");
 
 
-var startTime = Date.now();
-
-
-var site = "";
-var response = null;
-//var showHelp = false;
+window.response = null;
 
 var headers = {};
 
 var args = getopt(system.args, "hVaftUJdICc:MSEp:Tsx:A:r:mHX:PD:R:Oi:u:v");
 
 var page_settings = {encoding: "utf8"};
-var random = "IsHOulDb34RaNd0MsTR1ngbUt1mN0t";
-var injectScript = null;
 
-
-if (typeof args == 'string') {
+if (typeof args === 'string') {
     console.log("Error: " + args);
     phantom.exit(-1);
 }
 
-for (var a = 0; a < args.opts.length; a++) {
-    switch (args.opts[a][0]) {
-        case "h":
-            usage();
-            phantom.exit(1);
-            break;
-        case "P":
-            page_settings.operation = "POST";
-            break;
-        case "D":
-            page_settings.data = args.opts[a][1];
-            break;
-        case "R":
-            random = args.opts[a][1];
-            break;
-        case "u":
-            injectScript = fs.read(args.opts[a][1]);
-            break;
-        case "v":
-            var vs = verifyUserScript(injectScript);
-            if (vs !== true) console.log(vs);
-            phantom.exit(0);
-            break;
-    }
-}
+parseArgsToOptions(args, window.options, page_settings);
 
-
-parseArgsToOptions(args);
-
-site = args.args[1];
+var site = args.args[1] || "";
 
 if (!site) {
     usage();
     phantom.exit(-1);
 }
 
-if (site.length < 4 || site.substring(0, 4).toLowerCase() != "http") {
+if (site.length < 4 || site.substring(0, 4).toLowerCase() !== "http") {
     site = "http://" + site;
 }
 
@@ -104,14 +69,15 @@ phantom.onError = function (msg, trace) {
 };
 
 
-page.onConsoleMessage = function (msg, lineNum, sourceId) {
+page.onConsoleMessage = function (msg) {
     if (options.verbose)
         console.log("console: " + msg);
-}
-page.onError = function (msg, lineNum, sourceId) {
+};
+
+page.onError = function (msg, lineNum) {
     if (options.verbose)
         console.log("console error: on   " + JSON.stringify(lineNum) + " " + msg);
-}
+};
 
 page.onAlert = function (msg) {
     if (options.verbose)
@@ -123,10 +89,9 @@ page.settings.loadImages = options.loadImages;
 
 
 page.onResourceReceived = function (resource) {
-    if (window.response == null) {
+    if (window.response === null) {
         window.response = resource;
         // @TODO sanytize response.contentType
-
     }
 };
 
@@ -138,27 +103,27 @@ page.onResourceRequested = function (requestData, networkRequest) {
 // to detect window.location= / document.location.href=
 page.onNavigationRequested = onNavigationRequested;
 
-page.onConfirm = function (msg) {
+page.onConfirm = function () {
     return true;
-} // recently changed
+};
 
 /*
  phantomjs issue #11684 workaround
  https://github.com/ariya/phantomjs/issues/11684
  */
 var isPageInitialized = false;
+
 page.onInitialized = function () {
-    if (isPageInitialized) return;
-    isPageInitialized = true;
+    if (!isPageInitialized) {
+        isPageInitialized = true;
 
-    // try to hide phantomjs
-    page.evaluate(function () {
-        window.__callPhantom = window.callPhantom;
-        delete window.callPhantom;
-    });
-
-    startProbe(random, injectScript);
-
+        // try to hide phantomjs
+        page.evaluate(function () {
+            window.__callPhantom = window.callPhantom;
+            delete window.callPhantom;
+        });
+        startProbe(window.options.random, window.options.injectScript);
+    }
 };
 
 
@@ -176,6 +141,7 @@ page.onCallback = function (data) {
         case "die": // @TMP
             console.log(data.argument);
             phantom.exit(0);
+            break;
         case "render":
             try {
                 page.render(data.argument);
@@ -189,7 +155,7 @@ page.onCallback = function (data) {
                 fs.write(data.file, data.content, data.mode || 'w');
                 return true;
             } catch (e) {
-                console.log(e)
+                console.log(e);
                 return false;
             }
             break;
@@ -207,9 +173,9 @@ page.onCallback = function (data) {
             });
 
             if (options.returnHtml) {
-                page.evaluate(function (options) {
+                page.evaluate(function () {
                     window.__PROBE__.printPageHTML();
-                }, options);
+                });
             }
 
             page.evaluate(function () {
@@ -222,7 +188,7 @@ page.onCallback = function (data) {
 
     }
 
-}
+};
 
 
 if (options.httpAuth) {
@@ -258,9 +224,9 @@ page.viewportSize = {
 
 page.open(site, page_settings, function (status) {
     var response = window.response; // just to be clear
+
     if (status !== 'success') {
-        var mess = "";
-        var out = {response: response};
+
         if (!response || response.headers.length == 0) {
             printStatus("error", "load");
             phantom.exit(1);
@@ -283,7 +249,6 @@ page.open(site, page_settings, function (status) {
         phantom.exit(1);
     }
 
-
     if (options.getCookies) {
         printCookies();
     }
@@ -294,7 +259,6 @@ page.open(site, page_settings, function (status) {
         console.log("startAnalysis");
         // starting page analysis
         window.__PROBE__.startAnalysis();
-    })
-
+    });
 
 });

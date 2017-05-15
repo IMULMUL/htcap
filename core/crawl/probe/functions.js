@@ -83,7 +83,6 @@ function printStatus(status, errcode, message, redirect) {
         }
     }
     if (redirect) o.redirect = redirect;
-    o.time = Math.floor((Date.now() - window.startTime) / 1000);
     console.log(JSON.stringify(o));
     console.log("]")
 }
@@ -130,15 +129,31 @@ function usage() {
 }
 
 
-function parseArgsToOptions(args) {
+function parseArgsToOptions(args, options, page_settings) {
 
     for (var a = 0; a < args.opts.length; a++) {
         switch (args.opts[a][0]) {
-            // case "h":
-            // 	//showHelp = true;
-            // 	usage();
-            // 	phantom.exit(1);
-            // 	break;
+            case "h":
+                usage();
+                phantom.exit(1);
+                break;
+            case "P":
+                page_settings.operation = "POST";
+                break;
+            case "D":
+                page_settings.data = args.opts[a][1];
+                break;
+            case "R":
+                options.random = args.opts[a][1];
+                break;
+            case "u":
+                options.injectScript = fs.read(args.opts[a][1]);
+                break;
+            case "v":
+                var vs = verifyUserScript(options.injectScript);
+                if (vs !== true) console.log(vs);
+                phantom.exit(0);
+                break;
             case "V":
                 options.verbose = true;
                 break;
@@ -153,6 +168,7 @@ function parseArgsToOptions(args) {
                 break;
             case "d":
                 options.printAjaxPostData = false;
+                break;
             case "S":
                 options.checkScriptInsertion = false;
                 break;
@@ -162,7 +178,6 @@ function parseArgsToOptions(args) {
             case "C":
                 options.getCookies = false;
                 break;
-
             case "c":
                 try {
                     var cookie_file = fs.read(args.opts[a][1]);
@@ -171,7 +186,6 @@ function parseArgsToOptions(args) {
                     console.log(e);
                     phantom.exit(1);
                 }
-
                 break;
             case "p":
                 var arr = args.opts[a][1].split(":");
@@ -203,9 +217,6 @@ function parseArgsToOptions(args) {
                 break;
             case "X":
                 options.excludedUrls = args.opts[a][1].split(",");
-                break;
-            case "O":
-                options.overrideTimeoutFunctions = false;
                 break;
             case "O":
                 options.overrideTimeoutFunctions = false;
