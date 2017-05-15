@@ -23,32 +23,16 @@ phantom.injectJs("options.js");
 phantom.injectJs("constants.js");
 phantom.injectJs("probe.js");
 
-
 window.response = null;
 
 var headers = {};
+var page_settings = {encoding: "utf8"};
 
 var args = getopt(system.args, "hVaftUJdICc:MSEp:Tsx:A:r:mHX:PD:R:Oi:u:v");
 
-var page_settings = {encoding: "utf8"};
-
-if (typeof args === 'string') {
-    console.log("Error: " + args);
-    phantom.exit(-1);
-}
-
 parseArgsToOptions(args, window.options, page_settings);
 
-var site = args.args[1] || "";
-
-if (!site) {
-    usage();
-    phantom.exit(-1);
-}
-
-if (site.length < 4 || site.substring(0, 4).toLowerCase() !== "http") {
-    site = "http://" + site;
-}
+window.site = parseArgsToURL(args);
 
 console.log("[");
 
@@ -203,17 +187,16 @@ page.customHeaders = headers;
 
 
 for (var a = 0; a < options.setCookies.length; a++) {
-    // maybe this is wrogn acconding to rfc .. but phantomjs cannot set cookie witout a domain...
+    // maybe this is wrong according to rfc .. but phantomjs cannot set cookie without a domain...
     if (!options.setCookies[a].domain) {
         var purl = document.createElement("a");
-        purl.href = site;
+        purl.href = window.site;
         options.setCookies[a].domain = purl.hostname
     }
     if (options.setCookies[a].expires)
         options.setCookies[a].expires *= 1000;
 
     phantom.addCookie(options.setCookies[a]);
-
 }
 
 page.viewportSize = {
@@ -222,19 +205,19 @@ page.viewportSize = {
 };
 
 
-page.open(site, page_settings, function (status) {
+page.open(window.site, page_settings, function (status) {
     var response = window.response; // just to be clear
 
     if (status !== 'success') {
 
-        if (!response || response.headers.length == 0) {
+        if (!response || response.headers.length === 0) {
             printStatus("error", "load");
             phantom.exit(1);
         }
 
         // check for redirect first
         for (var a = 0; a < response.headers.length; a++) {
-            if (response.headers[a].name.toLowerCase() == 'location') {
+            if (response.headers[a].name.toLowerCase() === 'location') {
 
                 if (options.getCookies) {
                     printCookies();

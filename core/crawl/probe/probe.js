@@ -509,7 +509,7 @@
 
         /**
          * add the given element/event pair to map
-         * @param {Element} element
+         * @param {EventTarget} element
          * @param {String} eventName
          */
         Probe.prototype.addEventToMap = function (element, eventName) {

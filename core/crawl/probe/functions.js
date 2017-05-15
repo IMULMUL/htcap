@@ -20,7 +20,7 @@ function getopt(arguments, optstring) {
     for (var a = 0; a < m.length; a++) {
         var ai = args.indexOf("-" + m[a][0]);
         if (ai > -1) {
-            if (m[a][1] == ":") {
+            if (m[a][1] === ":") {
                 if (args[ai + 1]) {
                     ret.opts.push([m[a][0], args[ai + 1]]);
                     args.splice(ai, 2);
@@ -37,27 +37,17 @@ function getopt(arguments, optstring) {
     return ret;
 }
 
-
-function removeHash(url) {
-    var anchor = document.createElement("a");
-    anchor.href = url;
-
-    return anchor.protocol + "//" + anchor.host + anchor.pathname + anchor.search;
-}
-
-
 function compareUrls(url1, url2, includeHash) {
     var a1 = document.createElement("a");
     var a2 = document.createElement("a");
     a1.href = url1;
     a2.href = url2;
 
-    var eq = (a1.protocol == a2.protocol && a1.host == a2.host && a1.pathname == a2.pathname && a1.search == a2.search);
+    var eq = (a1.protocol === a2.protocol && a1.host === a2.host && a1.pathname === a2.pathname && a1.search === a2.search);
 
-    if (includeHash) eq = eq && a1.hash == a2.hash;
+    if (includeHash) eq = eq && a1.hash === a2.hash;
 
     return eq;
-
 }
 
 
@@ -68,7 +58,7 @@ function printCookies() {
 
 function printStatus(status, errcode, message, redirect) {
     var o = {status: status};
-    if (status == "error") {
+    if (status === "error") {
         o.code = errcode;
         switch (errcode) {
             case "load":
@@ -89,7 +79,7 @@ function printStatus(status, errcode, message, redirect) {
 
 
 function execTimedOut() {
-    if (!response || response.headers.length == 0) {
+    if (!response || response.headers.length === 0) {
         printStatus("error", "requestTimeout");
         phantom.exit(0);
     }
@@ -100,36 +90,41 @@ function execTimedOut() {
 
 
 function usage() {
-    var usage = "Usage: analyze.js [options] <url>\n" +
-        "  -V              verbose\n" +
-        "  -a              don't check ajax\n" +
-        "  -f              don't fill values\n" +
-        "  -t              don't trigger events (onload only)\n" +
-        "  -s              don't check websockets\n" +
-        "  -M              dont' map events\n" +
-        "  -T              don't trigger mapped events\n" +
-        "  -S              don't check for <script> insertion\n" +
-        "  -P              load page with POST\n" +
-        "  -D              POST data\n" +
-        "  -R <string>     random string used to generate random values - the same random string will generate the same random values\n" +
-        "  -X              comma separated list of excluded urls\n" +
-        "  -C              don't get cookies\n" +
-        "  -c <path>       set cookies from file (json)\n" +
-        "  -p <user:pass>  http auth \n" +
-        "  -x <seconds>    maximum execution time \n" +
-        "  -A <user agent> set user agent \n" +
-        "  -r <url>        set referer \n" +
-        "  -H              return generated html \n" +
-        "  -I              load images\n" +
-        "  -O              dont't override timeout functions\n" +
-        "  -u              path to user script to inject\n" +
-        "  -K              keep elements in the DOM (prevent removal)\n" +
-        "  -v              verify user script and exit";
+    var usage = ["Usage: analyze.js [options] <url>",
+        "  -V              verbose",
+        "  -a              don't check ajax",
+        "  -f              don't fill values",
+        "  -t              don't trigger events (onload only)",
+        "  -s              don't check websockets",
+        "  -M              dont' map events",
+        "  -T              don't trigger mapped events",
+        "  -S              don't check for <script> insertion",
+        "  -P              load page with POST",
+        "  -D              POST data",
+        "  -R <string>     random string used to generate random values - the same random string will generate the same random values",
+        "  -X              comma separated list of excluded urls",
+        "  -C              don't get cookies",
+        "  -c <path>       set cookies from file (json)",
+        "  -p <user:pass>  http auth ",
+        "  -x <seconds>    maximum execution time ",
+        "  -A <user agent> set user agent ",
+        "  -r <url>        set referer ",
+        "  -H              return generated html ",
+        "  -I              load images",
+        "  -O              dont't override timeout functions",
+        "  -u              path to user script to inject",
+        "  -K              keep elements in the DOM (prevent removal)",
+        "  -v              verify user script and exit"].join("\n");
     console.log(usage);
 }
 
 
 function parseArgsToOptions(args, options, page_settings) {
+
+    if (typeof args === 'string') {
+        console.log("Error: " + args);
+        phantom.exit(-1);
+    }
 
     for (var a = 0; a < args.opts.length; a++) {
         switch (args.opts[a][0]) {
@@ -229,7 +224,20 @@ function parseArgsToOptions(args, options, page_settings) {
                 break;
         }
     }
-};
+}
+
+function parseArgsToURL(args) {
+    var url = args.args[1];
+
+    if (typeof  url !== "string") {
+        usage();
+        phantom.exit(-1);
+    } else if (url.length < 4 || url.substring(0, 4).toLowerCase() !== "http") {
+        url = "http://" + url;
+    }
+
+    return url;
+}
 
 function onNavigationRequested(url, type) {
 
@@ -245,9 +253,8 @@ function onNavigationRequested(url, type) {
         }, url, type);
     }
 
-
     // allow the navigation if only the hash is changed
-    if (page.navigationLocked === true && compareUrls(url, site)) {
+    if (page.navigationLocked === true && compareUrls(url, window.site)) {
         page.navigationLocked = false;
         page.evaluate(function (url) {
             document.location.href = url;
@@ -282,7 +289,7 @@ function generateRandomValues(seed) {
         var i = randoms[randoms_i] % max;
         randoms_i = (randoms_i + 1) % randoms.length;
         return i;
-    }
+    };
 
     var randarr = function (arr, len) {
         var r;
@@ -357,9 +364,7 @@ function generateRandomValues(seed) {
     }
 
     return values;
-
-
-};
+}
 
 
 function startProbe(random, injectScript) {
@@ -485,8 +490,8 @@ function startProbe(random, injectScript) {
 
         if (options.checkWebsockets) {
             window.WebSocket = (function (WebSocket) {
-                return function (url, protocols) {
-                    window.__PROBE__.printWebsocket(url); //websockets.push(url);
+                return function (url) {
+                    window.__PROBE__.printWebsocket(url);
                     return WebSocket.prototype;
                 }
             })(window.WebSocket);
@@ -512,6 +517,7 @@ function startProbe(random, injectScript) {
         if (options.preventElementRemoval) {
             Node.prototype.__originalRemoveChild = Node.prototype.removeChild;
             Node.prototype.removeChild = function (node) {
+                // we keep element event if it's requested to be removed
                 return node;
             };
         }
@@ -526,7 +532,7 @@ function startProbe(random, injectScript) {
         window.close = function () {
         };
 
-        window.open = function (url, name, specs, replace) {
+        window.open = function (url) {
             window.__PROBE__.printLink(url);
         };
 
@@ -555,9 +561,9 @@ function startProbe(random, injectScript) {
 
 
 function checkContentType(ctype) {
-    ctype = ctype || ""
-    return (ctype.toLowerCase().split(";")[0] == "text/html");
-};
+    ctype = ctype || "";
+    return (ctype.toLowerCase().split(";")[0] === "text/html");
+}
 
 function assertContentTypeHtml(response) {
     if (!checkContentType(response.contentType)) {
