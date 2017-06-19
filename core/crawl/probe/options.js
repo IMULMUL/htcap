@@ -32,7 +32,7 @@ window.options = {
     referer: false,
     userAgent: 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36',
     returnHtml: false,
-    setCookies: [],
+    cookies: [],
     excludedUrls: [],
     maximumRecursion: 50,
     printUnknownRequests: false, // unknown requests are for example mailto: and javascript: urls

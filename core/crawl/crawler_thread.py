@@ -13,6 +13,7 @@ version.
 from __future__ import unicode_literals
 
 import json
+import os
 import threading
 import uuid
 from tempfile import NamedTemporaryFile
@@ -40,7 +41,8 @@ class CrawlerThread(threading.Thread):
 
         self._thread_uuid = uuid.uuid4()
         self._cookie_file = NamedTemporaryFile(prefix="htcap_cookie_file-", suffix=".json")
-        self._result_file = NamedTemporaryFile(prefix="htcap_result_file-", suffix=".json")
+        print(self._cookie_file.name)
+        # self._result_file = NamedTemporaryFile(prefix="htcap_result_file-", suffix=".json")
 
     def run(self):
         self._crawl()
@@ -55,7 +57,7 @@ class CrawlerThread(threading.Thread):
                 request = self._wait_request()
             except ThreadExitRequestException:
                 self._cookie_file.close()
-                self._result_file.close()
+                # self._result_file.close()
                 return
             except Exception as e:
                 print("-->" + str(e))
@@ -153,9 +155,12 @@ class CrawlerThread(threading.Thread):
         if len(request.cookies) > 0:
             for cookie in request.cookies:
                 cookies.append(cookie.get_dict())
-
+            print("cookies: {} | {}".format(len(cookies), json.dumps(cookies)))
+            self._cookie_file.truncate(0)
             self._cookie_file.write(json.dumps(cookies))
             self._cookie_file.flush()
+            os.fsync(self._cookie_file.fileno())
+            print(os.path.getsize(self._cookie_file.name))
 
             params.extend(("-c", self._cookie_file.name))
 
@@ -168,17 +173,18 @@ class CrawlerThread(threading.Thread):
         params.extend(("-i", str(request.db_id)))
 
         params.append(url)
-        params.append(self._result_file.name)
+        # params.append(self._result_file.name)
 
         while retries:
-
+            print("cmd: {}".format(json.dumps(params)))
             cmd = CommandExecutor(Shared.probe_cmd + params)
             jsn = cmd.execute(Shared.options['process_timeout'] + 2)
 
-            print(self._result_file.read())
+            if cmd.err:
+                print('Error: {}'.format(cmd.err))
 
             if jsn is None:
-                errors.appnd(ERROR_PROBEKILLED)
+                errors.append(ERROR_PROBEKILLED)
                 sleep(CrawlerThread._PROCESS_RETRIES_INTERVAL)  # ... ???
                 retries -= 1
                 continue
@@ -187,6 +193,7 @@ class CrawlerThread(threading.Thread):
             if jsn and type(jsn) is not str:
                 jsn = jsn[0]
 
+            # print("result_file: {} | {}".format(self._thread_uuid, self._result_file.read()))
             probe_array = self._load_probe_json(jsn)
 
             if probe_array:

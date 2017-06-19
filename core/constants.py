@@ -47,7 +47,7 @@ VULNTYPE_XSS = "xss"
 
 CRAWLER_DEFAULTS = {
     "process_timeout": 300,  # when lots of element(~25000) are added dynamically it can take some time..
-    "num_threads": 10,
+    "num_threads": 1,
     "max_redirects": 10,
     "max_depth": 100,
     "max_post_depth": 10,

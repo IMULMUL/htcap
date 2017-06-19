@@ -50,11 +50,9 @@ function compareUrls(url1, url2, includeHash) {
     return eq;
 }
 
-
 function printCookies() {
     console.log('["cookies",' + JSON.stringify(phantom.cookies) + "],");
 }
-
 
 function printStatus(status, errcode, message, redirect) {
     var o = {status: status};
@@ -77,7 +75,6 @@ function printStatus(status, errcode, message, redirect) {
     console.log("]")
 }
 
-
 function execTimedOut() {
     if (!response || response.headers.length === 0) {
         printStatus("error", "requestTimeout");
@@ -85,9 +82,7 @@ function execTimedOut() {
     }
     printStatus("error", "probe_timeout");
     phantom.exit(0);
-
 }
-
 
 function usage() {
     var usage = ["Usage: analyze.js [options] <url> <result_file_path>",
@@ -117,7 +112,6 @@ function usage() {
         "  -v              verify user script and exit"].join("\n");
     console.log(usage);
 }
-
 
 function parseArgsToOptions(args, options, page_settings) {
 
@@ -174,11 +168,14 @@ function parseArgsToOptions(args, options, page_settings) {
                 options.getCookies = false;
                 break;
             case "c":
-                try {
-                    var cookie_file = fs.read(args.opts[a][1]);
-                    options.setCookies = JSON.parse(cookie_file);
-                } catch (e) {
-                    console.log(e);
+                var path = args.opts[a][1];
+                if (fs.isReadable(path)) {
+                    var cookies = fs.read(path);
+                    // DEBUG:
+                    // console.log("cookies",cookies);
+                    options.cookies = JSON.parse(cookies);
+                } else {
+                    console.log('Error: Can\'t read cookie file');
                     phantom.exit(1);
                 }
                 break;
@@ -250,31 +247,20 @@ function parseArgsToResultFilePath(args) {
     return path;
 }
 
-function onNavigationRequested(url, type) {
-
-    if (page.navigationLocked === true) {
-        page.evaluate(function (url, type) {
-            if (type === "LinkClicked")
-                return;
-
-            if (type === 'Other' && url !== "about:blank") {
-                window.__PROBE__.printLink(url);
-            }
-
-        }, url, type);
-    }
-
-    // allow the navigation if only the hash is changed
-    if (page.navigationLocked === true && compareUrls(url, window.site)) {
-        page.navigationLocked = false;
-        page.evaluate(function (url) {
-            document.location.href = url;
-        }, url);
-    }
-
-    page.navigationLocked = true;
+function setCookies(cookies) {
+    cookies.forEach(function (cookie) {
+        // maybe this is wrong according to rfc .. but phantomjs cannot set cookie without a domain...
+        if (!cookie.domain) {
+            var purl = document.createElement("a");
+            purl.href = window.site;
+            cookie.domain = purl.hostname
+        }
+        if (cookie.expires) {
+            cookie.expires *= 1000;
+        }
+        phantom.addCookie(cookie);
+    });
 }
-
 
 // generates PSEUDO random values. the same seed will generate the same values
 function generateRandomValues(seed) {
@@ -376,7 +362,6 @@ function generateRandomValues(seed) {
 
     return values;
 }
-
 
 function startProbe(random, injectScript) {
     // generate a static map of random values using a "static" seed for input fields
@@ -570,7 +555,6 @@ function startProbe(random, injectScript) {
 
 }
 
-
 function checkContentType(ctype) {
     ctype = ctype || "";
     return (ctype.toLowerCase().split(";")[0] === "text/html");
@@ -593,4 +577,3 @@ function verifyUserScript(script) {
 
     return true;
 }
-

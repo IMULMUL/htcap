@@ -41,19 +41,19 @@
                 id: options.id,
                 vars: {},
                 log: function (str) {
-                    _log(str);
+                    window.__callPhantom({cmd: 'log', argument: str});
                 },
                 print: function (str) {
-                    _printUserOutput(str)
+                    _print('["user",' + JSON.stringify(str) + '],');
                 },
                 fread: function (file) {
-                    return _fread(file);
+                    return window.__callPhantom({cmd: 'fread', file: file});
                 },
                 fwrite: function (file, content, mode) {
-                    return _fwrite(file, content, mode);
+                    return window.__callPhantom({cmd: 'fwrite', file: file, content: content, mode: mode || 'w'});
                 },
                 render: function (file) {
-                    return _render(file);
+                    return window.__callPhantom({cmd: 'render', argument: file});
                 },
                 triggerEvent: function (element, eventName) {
                     currentProbe._trigger(new currentProbe.PageEvent(element, eventName));
@@ -806,22 +806,6 @@
             window.__callPhantom({cmd: 'print', argument: str});
         }
 
-        function _log(str) {
-            window.__callPhantom({cmd: 'log', argument: str});
-        }
-
-        function _fread(file) {
-            return window.__callPhantom({cmd: 'fread', file: file});
-        }
-
-        function _fwrite(file, content, mode) {
-            return window.__callPhantom({cmd: 'fwrite', file: file, content: content, mode: mode || 'w'});
-        }
-
-        function _render(file) {
-            return window.__callPhantom({cmd: 'render', argument: file});
-        }
-
         /**
          * convert an element to a string
          * @param {Element=} element - element to convert
@@ -853,11 +837,6 @@
                 (element.value ? "v=" + element.value + " " : "") +
                 (text ? "txt=" + text : "") +
                 "]";
-        }
-
-        function _printUserOutput(str) {
-            var json = '["user",' + JSON.stringify(str) + '],';
-            _print(json);
         }
 
         /**
