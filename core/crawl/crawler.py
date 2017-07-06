@@ -113,6 +113,7 @@ Options:
   -I              ignore robots.txt (otherwise it will try to read the robots.txt related to the start url provided)
   -O              don't override timeout functions (setTimeout, setInterval)
   -K              keep elements in the DOM (prevent removal)
+  -e SEED         seed used to generate strings during crawl
 """.format(
             version=get_program_infos()['version'],
             crawl_output_rename=CRAWLOUTPUT_RENAME,
@@ -166,7 +167,7 @@ Options:
 
         # retrieving user arguments
         try:
-            opts, args = getopt.getopt(argv, 'ho:qvm:s:D:P:FHd:c:C:r:x:p:n:A:U:t:u:SGNR:IOK')
+            opts, args = getopt.getopt(argv, 'ho:qvm:s:D:P:FHd:c:C:r:x:p:n:A:U:t:u:SGNR:IOKe:')
         except getopt.GetoptError as err:
             print(str(err))
             self._usage()
@@ -260,6 +261,8 @@ Options:
                 else:
                     print("error: unable to open USER_SCRIPT")
                     sys.exit(1)
+            elif o == "-e":  # seed for random value
+                Shared.options["random_seed"] = v
 
         # warn about -d option in domain scope mode
         if Shared.options['scope'] != CRAWLSCOPE_DOMAIN and len(Shared.allowed_domains) > 0:
@@ -316,17 +319,17 @@ Options:
                 # retrieving options from the last crawl
                 random_seed, cookies = database.retrieve_crawl_info(crawl_id - 1)
 
-                if random_seed:
+                # if the db had a seed and none were provided before
+                if random_seed and Shared.options.get("random_seed") is None:
                     Shared.options["random_seed"] = random_seed
-                else:
-                    Shared.options["random_seed"] = self._generate_random_string(20)
 
                 # if no cookie was provided and some exist from the last crawl
                 if len(Shared.start_cookies) <= 0 and cookies != "[]" and cookies is not None:
                     for cookie_string in self._parse_cookie_string(cookies):
                         Shared.start_cookies.append(Cookie(cookie_string))
 
-            else:
+            # if no seed have been set yet
+            if Shared.options.get("random_seed") is None:
                 Shared.options["random_seed"] = self._generate_random_string(20)
 
         except Exception as e:
