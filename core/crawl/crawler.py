@@ -320,7 +320,7 @@ Options:
                 random_seed, cookies = database.retrieve_crawl_info(crawl_id - 1)
 
                 # if the db had a seed and none were provided before
-                if random_seed and Shared.options.get("random_seed") is None:
+                if random_seed and not Shared.options.get("random_seed"):
                     Shared.options["random_seed"] = random_seed
 
                 # if no cookie was provided and some exist from the last crawl
@@ -329,7 +329,7 @@ Options:
                         Shared.start_cookies.append(Cookie(cookie_string))
 
             # if no seed have been set yet
-            if Shared.options.get("random_seed") is None:
+            if not Shared.options.get("random_seed"):
                 Shared.options["random_seed"] = self._generate_random_string(20)
 
         except Exception as e:
