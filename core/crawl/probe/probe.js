@@ -14,15 +14,14 @@
      this function is passed to page.evaluate. doing so it is possible to avoid that the Probe object
      is inserted into page window scope (only its instance is referred by window.__PROBE__)
      */
-    window.initProbe = function initProbe(options, inputValues, userCustomScript) {
+    window.initProbe = function initProbe(options, inputValues) {
 
         /**
          * @param options
          * @param inputValues
-         * @param userCustomScript
          * @constructor
          */
-        function Probe(options, inputValues, userCustomScript) {
+        function Probe(options, inputValues) {
             var currentProbe = this;
 
             this._options = options;
@@ -36,37 +35,6 @@
             this._eventsMap = [];
             this._triggeredPageEvents = [];
             this._inputValues = inputValues;
-
-            this._userInterface = {
-                id: options.id,
-                vars: {},
-                log: function (str) {
-                    _log(str);
-                },
-                print: function (str) {
-                    _printUserOutput(str)
-                },
-                fread: function (file) {
-                    return _fread(file);
-                },
-                fwrite: function (file, content, mode) {
-                    return _fwrite(file, content, mode);
-                },
-                render: function (file) {
-                    return _render(file);
-                },
-                triggerEvent: function (element, eventName) {
-                    currentProbe._trigger(new currentProbe.PageEvent(element, eventName));
-                }
-            };
-            this.userEvents = {};
-            if (userCustomScript) {
-                try {
-                    eval("this.userEvents=" + userCustomScript.trim() + ";");
-                } catch (e) {
-                }
-            }
-
         }
 
         /**
@@ -144,20 +112,16 @@
 
             // DEBUG:
             // console.log('PageEvent triggering events for : ', _elementToString(this.element), this.eventName);
-            var ueRet = window.__PROBE__.triggerUserEvent("onTriggerEvent", [this.element, this.eventName]);
 
-            if (ueRet !== false) {
-                if ('createEvent' in document) {
-                    var evt = document.createEvent('HTMLEvents');
-                    evt.initEvent(this.eventName, true, false);
-                    this.element.dispatchEvent(evt);
-                } else {
-                    var eventName = 'on' + this.eventName;
-                    if (eventName in this.element && typeof this.element[eventName] === "function") {
-                        this.element[eventName]();
-                    }
+            if ('createEvent' in document) {
+                var evt = document.createEvent('HTMLEvents');
+                evt.initEvent(this.eventName, true, false);
+                this.element.dispatchEvent(evt);
+            } else {
+                var eventName = 'on' + this.eventName;
+                if (eventName in this.element && typeof this.element[eventName] === "function") {
+                    this.element[eventName]();
                 }
-                window.__PROBE__.triggerUserEvent("onEventTriggered", [this.element, this.eventName]);
             }
         };
 
@@ -232,7 +196,6 @@
         Probe.prototype.EventLoopManager.prototype.start = function () {
             // DEBUG:
             // console.log('eventLoop start');
-            window.__PROBE__.triggerUserEvent("onStart");
 
             window.postMessage(__HTCAP.messageEvent.eventLoopReady, "*");
         };
@@ -261,10 +224,6 @@
             } else if (this._doneXHRQueue.length > 0) { // if there is XHR done
                 var request = this._doneXHRQueue.shift();
 
-                // if all XHR done
-                if (this._doneXHRQueue.length === 0) {
-                    window.__PROBE__.triggerUserEvent("onAllXhrsCompleted");
-                }
                 window.__originalSetTimeout(function () {
                     window.postMessage(__HTCAP.messageEvent.eventLoopReady, "*");
                 }, __HTCAP.eventLoop.afterDoneXHRTimeout);
@@ -527,16 +486,6 @@
             });
         };
 
-        Probe.prototype.triggerUserEvent = function (name, params) {
-            params = params || [];
-            if (!(name in this.userEvents) || typeof this.userEvents[name] !== 'function') {
-                return true;
-            }
-            params.splice(0, 0, this._userInterface);
-            var ret = this.userEvents[name].apply(this._userInterface, params);
-            return !(ret === false)
-        };
-
         /**
          * Start the analysis of the current Document
          */
@@ -584,89 +533,86 @@
         Probe.prototype._setVal = function (el) {
             var _this = this;
 
-            var ueRet = window.__PROBE__.triggerUserEvent("onFillInput", [el]);
-            if (ueRet === true) {
-                var setv = function (name) {
-                    var ret = _this.getRandomValue('string');
-                    _this._options.inputNameMatchValue.forEach(function (matchValue) {
-                        var regexp = new RegExp(matchValue.name, "gi");
-                        if (name.match(regexp)) {
-                            ret = _this.getRandomValue(matchValue.value);
-                        }
-                    });
-                    return ret;
-                };
+            var setv = function (name) {
+                var ret = _this.getRandomValue('string');
+                _this._options.inputNameMatchValue.forEach(function (matchValue) {
+                    var regexp = new RegExp(matchValue.name, "gi");
+                    if (name.match(regexp)) {
+                        ret = _this.getRandomValue(matchValue.value);
+                    }
+                });
+                return ret;
+            };
 
-                // needed for example by angularjs
-                var triggerChange = function () {
-                    // update angular model
-                    _this._trigger(new _this.PageEvent(el, 'input'));
+            // needed for example by angularjs
+            var triggerChange = function () {
+                // update angular model
+                _this._trigger(new _this.PageEvent(el, 'input'));
 
-                    // _this._trigger(new _this.PageEvent(el, 'blur'));
-                    // _this._trigger(new _this.PageEvent(el, 'keyup'));
-                    // _this._trigger(new _this.PageEvent(el, 'keydown'));
-                };
+                // _this._trigger(new _this.PageEvent(el, 'blur'));
+                // _this._trigger(new _this.PageEvent(el, 'keyup'));
+                // _this._trigger(new _this.PageEvent(el, 'keydown'));
+            };
 
-                if (el.tagName.toLowerCase() === 'textarea') {
+            if (el.tagName.toLowerCase() === 'textarea') {
+                el.value = setv(el.name);
+                triggerChange();
+
+            } else if (el.tagName.toLowerCase() === 'select') {
+                var opts = el.getElementsByTagName('option');
+                if (opts.length > 1) { // avoid to set the first (already selected) options
+                    // @TODO .. qui seleziono l'ultimo val.. ma devo controllare che non fosse "selected"
+                    el.value = opts[opts.length - 1].value;
+                } else {
                     el.value = setv(el.name);
-                    triggerChange();
-
-                } else if (el.tagName.toLowerCase() === 'select') {
-                    var opts = el.getElementsByTagName('option');
-                    if (opts.length > 1) { // avoid to set the first (already selected) options
-                        // @TODO .. qui seleziono l'ultimo val.. ma devo controllare che non fosse "selected"
-                        el.value = opts[opts.length - 1].value;
-                    } else {
-                        el.value = setv(el.name);
-                    }
-                    triggerChange();
-
-                } else if (el.tagName.toLowerCase() === 'input') {
-                    var type = el.type.toLowerCase();
-
-                    switch (type) {
-                        case 'button':
-                        case 'hidden':
-                        case 'submit':
-                        case 'file':
-                            return;
-                        case '':
-                        case 'text':
-                        case 'search':
-                            el.value = setv(el.name);
-                            break;
-                        case 'radio':
-                        case 'checkbox':
-                            el.setAttribute('checked', !(el.getAttribute('checked')));
-                            break;
-                        case 'range':
-                        case 'number':
-                            if ('min' in el && el.min) {
-                                el.value = (parseInt(el.min) + parseInt(('step' in el) ? el.step : 1));
-                            } else {
-                                el.value = parseInt(this.getRandomValue('number'));
-                            }
-                            break;
-                        case 'password':
-                        case 'color':
-                        case 'date':
-                        case 'email':
-                        case 'month':
-                        case 'time':
-                        case 'url':
-                        case 'week':
-                        case 'tel':
-                            el.value = this.getRandomValue(type);
-                            break;
-                        case 'datetime-local':
-                            el.value = this.getRandomValue('datetimeLocal');
-                            break;
-                        default:
-                            return;
-                    }
-
-                    triggerChange();
                 }
+                triggerChange();
+
+            } else if (el.tagName.toLowerCase() === 'input') {
+                var type = el.type.toLowerCase();
+
+                switch (type) {
+                    case 'button':
+                    case 'hidden':
+                    case 'submit':
+                    case 'file':
+                        return;
+                    case '':
+                    case 'text':
+                    case 'search':
+                        el.value = setv(el.name);
+                        break;
+                    case 'radio':
+                    case 'checkbox':
+                        el.setAttribute('checked', !(el.getAttribute('checked')));
+                        break;
+                    case 'range':
+                    case 'number':
+                        if ('min' in el && el.min) {
+                            el.value = (parseInt(el.min) + parseInt(('step' in el) ? el.step : 1));
+                        } else {
+                            el.value = parseInt(this.getRandomValue('number'));
+                        }
+                        break;
+                    case 'password':
+                    case 'color':
+                    case 'date':
+                    case 'email':
+                    case 'month':
+                    case 'time':
+                    case 'url':
+                    case 'week':
+                    case 'tel':
+                        el.value = this.getRandomValue(type);
+                        break;
+                    case 'datetime-local':
+                        el.value = this.getRandomValue('datetimeLocal');
+                        break;
+                    default:
+                        return;
+                }
+
+                triggerChange();
             }
         };
 
@@ -806,22 +752,6 @@
             window.__callPhantom({cmd: 'print', argument: str});
         }
 
-        function _log(str) {
-            window.__callPhantom({cmd: 'log', argument: str});
-        }
-
-        function _fread(file) {
-            return window.__callPhantom({cmd: 'fread', file: file});
-        }
-
-        function _fwrite(file, content, mode) {
-            return window.__callPhantom({cmd: 'fwrite', file: file, content: content, mode: mode || 'w'});
-        }
-
-        function _render(file) {
-            return window.__callPhantom({cmd: 'render', argument: file});
-        }
-
         /**
          * convert an element to a string
          * @param {Element=} element - element to convert
@@ -853,11 +783,6 @@
                 (element.value ? "v=" + element.value + " " : "") +
                 (text ? "txt=" + text : "") +
                 "]";
-        }
-
-        function _printUserOutput(str) {
-            var json = '["user",' + JSON.stringify(str) + '],';
-            _print(json);
         }
 
         /**
@@ -912,7 +837,7 @@
             return anchor.protocol + "//" + anchor.host + anchor.pathname + (qs ? "?" + qs : "") + anchor.hash;
         }
 
-        var probe = new Probe(options, inputValues, userCustomScript);
+        var probe = new Probe(options, inputValues);
 
         // listening for messageEvent to trigger waiting events
         window.addEventListener("message", probe.eventLoopManager.eventMessageHandler.bind(probe.eventLoopManager), true);

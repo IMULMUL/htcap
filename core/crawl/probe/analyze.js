@@ -33,11 +33,10 @@ var response = null;
 
 var headers = {};
 
-var args = getopt(system.args, "hVaftUJdICc:MSEp:Tsx:A:r:mHX:PD:R:Oi:u:v");
+var args = getopt(system.args, "hVaftUJdICc:MSEp:Tsx:A:r:mHX:PD:R:Oi:");
 
 var page_settings = {encoding: "utf8"};
 var random = "IsHOulDb34RaNd0MsTR1ngbUt1mN0t";
-var injectScript = null;
 
 
 if (typeof args == 'string') {
@@ -59,14 +58,6 @@ for (var a = 0; a < args.opts.length; a++) {
             break;
         case "R":
             random = args.opts[a][1];
-            break;
-        case "u":
-            injectScript = fs.read(args.opts[a][1]);
-            break;
-        case "v":
-            var vs = verifyUserScript(injectScript);
-            if (vs !== true) console.log(vs);
-            phantom.exit(0);
             break;
     }
 }
@@ -140,7 +131,7 @@ page.onNavigationRequested = onNavigationRequested;
 
 page.onConfirm = function (msg) {
     return true;
-} // recently changed
+}; // recently changed
 
 /*
  phantomjs issue #11684 workaround
@@ -157,7 +148,7 @@ page.onInitialized = function () {
         delete window.callPhantom;
     });
 
-    startProbe(random, injectScript);
+    startProbe(random);
 
 };
 
@@ -167,41 +158,8 @@ page.onCallback = function (data) {
         case "print":
             console.log(data.argument);
             break;
-        case "log":
-            try {
-                fs.write("htcap_log-" + options.id + ".txt", data.argument + "\n", 'a');
-            } catch (e) {
-            } // @
-            break;
-        case "die": // @TMP
-            console.log(data.argument);
-            phantom.exit(0);
-        case "render":
-            try {
-                page.render(data.argument);
-                return true;
-            } catch (e) {
-                return false;
-            }
-            break;
-        case "fwrite":
-            try {
-                fs.write(data.file, data.content, data.mode || 'w');
-                return true;
-            } catch (e) {
-                console.log(e)
-                return false;
-            }
-            break;
-        case "fread":
-            try {
-                return "" + fs.read(data.file);
-            } catch (e) {
-                return false;
-            }
-            break;
-        case "end":
 
+        case "end":
             page.evaluate(function () {
                 window.__PROBE__.printRequests();
             });
@@ -212,17 +170,11 @@ page.onCallback = function (data) {
                 }, options);
             }
 
-            page.evaluate(function () {
-                window.__PROBE__.triggerUserEvent("onEnd");
-            });
-
             printStatus("ok", window.response.contentType);
             phantom.exit(0);
             break;
-
     }
-
-}
+};
 
 
 if (options.httpAuth) {

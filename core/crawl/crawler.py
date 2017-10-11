@@ -105,7 +105,6 @@ Options:
   -A CREDENTIALS  username and password used for HTTP authentication separated by a colon
   -U USER_AGENT   set user agent
   -t TIMEOUT      maximum seconds spent to analyze a page (default {process_timeout})
-  -u USER_SCRIPT  inject USER_SCRIPT into any loaded page
   -S              skip initial checks
   -G              group query_string parameters with the same name ('[]' ending excluded)
   -N              don't normalize URL path (keep ../../)
@@ -158,7 +157,6 @@ Options:
         initial_checks = True
         http_auth = None
         get_robots_txt = True
-        user_script = None
 
         # validate phantomjs presence
         if not self._probe["cmd"]:
@@ -167,7 +165,7 @@ Options:
 
         # retrieving user arguments
         try:
-            opts, args = getopt.getopt(argv, 'ho:qvm:s:D:P:FHd:c:C:r:x:p:n:A:U:t:u:SGNR:IOKe:')
+            opts, args = getopt.getopt(argv, 'ho:qvm:s:D:P:FHd:c:C:r:x:p:n:A:U:t:SGNR:IOKe:')
         except getopt.GetoptError as err:
             print(str(err))
             self._usage()
@@ -255,12 +253,6 @@ Options:
                 Shared.options['crawl_forms'] = False
             elif o == "-v":  # verbose
                 verbose = True
-            elif o == "-u":  # user script
-                if os.path.isfile(v):
-                    user_script = os.path.abspath(v)
-                else:
-                    print("error: unable to open USER_SCRIPT")
-                    sys.exit(1)
             elif o == "-e":  # seed for random value
                 Shared.options["random_seed"] = v
 
@@ -295,10 +287,6 @@ Options:
                 " consider to upgrade to >= 2.7.9 in case of SSL errors")
 
         stdoutw("Initializing . ")
-
-        # validate user script
-        if user_script and initial_checks:
-            self._check_user_script_syntax(self._probe["cmd"], user_script)
 
         # get database
         try:
@@ -337,7 +325,7 @@ Options:
             sys.exit(1)
 
         # set probe arguments
-        self._set_probe(user_script)
+        self._set_probe()
 
         Shared.probe_cmd = self._probe["cmd"] + self._probe["options"]
 
@@ -519,10 +507,9 @@ Options:
                 print(str(e))
                 pass
 
-    def _set_probe(self, user_script):
+    def _set_probe(self):
         """
         set command arguments for the javascript probe
-        :param user_script:
         """
 
         self._probe["options"].extend(("-R", Shared.options['random_seed']))
@@ -548,27 +535,11 @@ Options:
         if Shared.options['save_html']:
             self._probe["options"].append("-H")
 
-        if user_script:
-            self._probe["options"].extend(("-u", user_script))
-
         self._probe["options"].extend(("-x", str(Shared.options['process_timeout'])))
         self._probe["options"].extend(("-A", Shared.options['user_agent']))
 
         if not Shared.options['override_timeout_functions']:
             self._probe["options"].append("-O")
-
-    @staticmethod
-    def _check_user_script_syntax(probe_cmd, user_script):
-        try:
-            exe = CommandExecutor(probe_cmd + ["-u", user_script, "-v"], False)
-            out = exe.execute(5)
-            if out:
-                print("\n* USER_SCRIPT error: %s" % out)
-                sys.exit(1)
-            stdoutw(". ")
-        except KeyboardInterrupt:
-            print("\nAborted")
-            sys.exit(0)
 
     @staticmethod
     def _kill_threads(threads):

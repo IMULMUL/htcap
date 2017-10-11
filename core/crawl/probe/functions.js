@@ -123,10 +123,8 @@ function usage() {
         "  -H              return generated html \n" +
         "  -I              load images\n" +
         "  -O              dont't override timeout functions\n" +
-        "  -u              path to user script to inject\n" +
-        "  -K              keep elements in the DOM (prevent removal)\n" +
-        "  -v              verify user script and exit";
-    console.log(usage);
+        "  -K              keep elements in the DOM (prevent removal)" +
+        console.log(usage);
 }
 
 
@@ -134,11 +132,6 @@ function parseArgsToOptions(args) {
 
     for (var a = 0; a < args.opts.length; a++) {
         switch (args.opts[a][0]) {
-            // case "h":
-            // 	//showHelp = true;
-            // 	usage();
-            // 	phantom.exit(1);
-            // 	break;
             case "V":
                 options.verbose = true;
                 break;
@@ -153,6 +146,7 @@ function parseArgsToOptions(args) {
                 break;
             case "d":
                 options.printAjaxPostData = false;
+                break;
             case "S":
                 options.checkScriptInsertion = false;
                 break;
@@ -206,12 +200,6 @@ function parseArgsToOptions(args) {
                 break;
             case "O":
                 options.overrideTimeoutFunctions = false;
-                break;
-            case "O":
-                options.overrideTimeoutFunctions = false;
-                break;
-            case "i":
-                options.id = args.opts[a][1];
                 break;
             case "K":
                 options.preventElementRemoval = true;
@@ -351,7 +339,7 @@ function generateRandomValues(seed) {
 };
 
 
-function startProbe(random, injectScript) {
+function startProbe(random) {
     // generate a static map of random values using a "static" seed for input fields
     // the same seed generates the same values
     // generated values MUST be the same for all analyze.js call othewise the same form will look different
@@ -366,7 +354,7 @@ function startProbe(random, injectScript) {
         window.__HTCAP = __HTCAP;
     }, window.__HTCAP);
 
-    page.evaluate(initProbe, options, inputValues, injectScript);
+    page.evaluate(initProbe, options, inputValues);
 
     page.evaluate(function (options) {
 
@@ -440,14 +428,11 @@ function startProbe(random, injectScript) {
                     return;
                 }
 
-                var ueRet = window.__PROBE__.triggerUserEvent("onXhr", [this.__request]);
-                if (ueRet) {
-                    window.__PROBE__.sentXHRs.push(requestKey);
-                    window.__PROBE__.addToRequestToPrint(this.__request);
+                window.__PROBE__.sentXHRs.push(requestKey);
+                window.__PROBE__.addToRequestToPrint(this.__request);
 
-                    if (!this.__skipped)
-                        return this.__originalSend(data);
-                }
+                if (!this.__skipped)
+                    return this.__originalSend(data);
             };
         }
 
@@ -537,7 +522,6 @@ function startProbe(random, injectScript) {
             attributeFilter: eventAttributeList
         });
 
-        window.__PROBE__.triggerUserEvent("onInit");
     }, options);
 
 }
@@ -554,15 +538,3 @@ function assertContentTypeHtml(response) {
         phantom.exit(0);
     }
 }
-
-function verifyUserScript(script) {
-    if (!script) return true;
-    try {
-        eval("var x = " + script.trim() + ";");
-    } catch (e) {
-        return "" + e;
-    }
-
-    return true;
-}
-
