@@ -16,7 +16,7 @@ function getopt(arguments, optstring) {
         args: args
     };
 
-    var m = optstring.match(/[a-zA-Z]\:*/g);
+    var m = optstring.match(/[a-zA-Z]:*/g);
     for (var a = 0; a < m.length; a++) {
         var ai = args.indexOf("-" + m[a][0]);
         if (ai > -1) {
@@ -40,26 +40,17 @@ function getopt(arguments, optstring) {
 }
 
 
-function removeHash(url) {
-    var anchor = document.createElement("a");
-    anchor.href = url;
-
-    return anchor.protocol + "//" + anchor.host + anchor.pathname + anchor.search;
-}
-
-
 function compareUrls(url1, url2, includeHash) {
     var a1 = document.createElement("a");
     var a2 = document.createElement("a");
     a1.href = url1;
     a2.href = url2;
 
-    var eq = (a1.protocol == a2.protocol && a1.host == a2.host && a1.pathname == a2.pathname && a1.search == a2.search);
+    var eq = (a1.protocol === a2.protocol && a1.host === a2.host && a1.pathname === a2.pathname && a1.search === a2.search);
 
-    if (includeHash) eq = eq && a1.hash == a2.hash;
+    if (includeHash) eq = eq && a1.hash === a2.hash;
 
     return eq;
-
 }
 
 
@@ -70,7 +61,7 @@ function printCookies() {
 
 function printStatus(status, errcode, message, redirect) {
     var o = {status: status};
-    if (status == "error") {
+    if (status === "error") {
         o.code = errcode;
         switch (errcode) {
             case "load":
@@ -92,7 +83,7 @@ function printStatus(status, errcode, message, redirect) {
 
 
 function execTimedOut() {
-    if (!response || response.headers.length == 0) {
+    if (!response || response.headers.length === 0) {
         printStatus("error", "requestTimeout");
         phantom.exit(0);
     }
@@ -125,7 +116,7 @@ function generateRandomValues(seed) {
         var i = randoms[randoms_i] % max;
         randoms_i = (randoms_i + 1) % randoms.length;
         return i;
-    }
+    };
 
     var randarr = function (arr, len) {
         var r;
@@ -183,9 +174,6 @@ function generateRandomValues(seed) {
         surname: function () {
             return randarr(surnames, 1);
         },
-        lastname: function () {
-            return generators.surname();
-        },
         firstname: function () {
             return randarr(names, 1);
         },
@@ -194,15 +182,13 @@ function generateRandomValues(seed) {
         }
     };
 
-
     for (var type in generators) {
         values[type] = generators[type]();
     }
 
     return values;
 
-
-};
+}
 
 
 function startProbe(random) {
@@ -316,8 +302,8 @@ function startProbe(random) {
         };
 
         window.WebSocket = (function (WebSocket) {
-            return function (url, protocols) {
-                window.__PROBE__.printWebsocket(url); //websockets.push(url);
+            return function (url) {
+                window.__PROBE__.printWebsocket(url);
                 return WebSocket.prototype;
             }
         })(window.WebSocket);
@@ -349,7 +335,7 @@ function startProbe(random) {
         window.close = function () {
         };
 
-        window.open = function (url, name, specs, replace) {
+        window.open = function (url) {
             window.__PROBE__.printLink(url);
         };
 
@@ -376,13 +362,8 @@ function startProbe(random) {
 }
 
 
-function checkContentType(ctype) {
-    ctype = ctype || ""
-    return (ctype.toLowerCase().split(";")[0] == "text/html");
-}
-
 function assertContentTypeHtml(response) {
-    if (!checkContentType(response.contentType)) {
+    if (response.contentType.toLowerCase().split(";")[0] !== "text/html") {
         printStatus("error", "contentType", "content type is " + response.contentType); // escape response.contentType???
         phantom.exit(0);
     }

@@ -22,8 +22,6 @@
          * @constructor
          */
         function Probe(options, inputValues) {
-            var currentProbe = this;
-
             this._options = options;
 
             this.sentXHRs = [];
@@ -101,7 +99,15 @@
          * @constructor
          */
         Probe.prototype.PageEvent = function (element, eventName) {
+            /**
+             * the DOM element
+             * @type {Element}
+             */
             this.element = element;
+            /**
+             * the event name
+             * @type {String}
+             */
             this.eventName = eventName;
         };
 
@@ -222,7 +228,7 @@
                 window.postMessage(__HTCAP.messageEvent.eventLoopReady, "*");
 
             } else if (this._doneXHRQueue.length > 0) { // if there is XHR done
-                var request = this._doneXHRQueue.shift();
+                this._doneXHRQueue.shift();
 
                 window.__originalSetTimeout(function () {
                     window.postMessage(__HTCAP.messageEvent.eventLoopReady, "*");
@@ -370,11 +376,7 @@
 
             url = url.split("#")[0];
 
-            if (url.match(/^[a-z0-9\-_]+\:/i) && !url.match(/(^https?)|(^ftps?)\:/i)) {
-                if (this._options.printUnknownRequests) {
-                    req = new this.Request("unknown", "GET", url, undefined, this.getLastTriggerPageEvent());
-                }
-            } else {
+            if (!(url.match(/^[a-z0-9\-_]+:/i) && !url.match(/(^https?)|(^ftps?):/i))) {
                 req = new this.Request("link", "GET", url, undefined, this.getLastTriggerPageEvent());
             }
 
@@ -728,10 +730,8 @@
                 }
             }
 
-            if (this._options.searchUrls) {
-                this._printRequestFromForm(element);
-                this._printRequestFromATag(element);
-            }
+            this._printRequestFromForm(element);
+            this._printRequestFromATag(element);
 
             if (this._options.triggerEvents) {
                 this._triggerElementEvents(element);

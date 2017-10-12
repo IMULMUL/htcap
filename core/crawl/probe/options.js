@@ -12,8 +12,6 @@ version.
 window.options = {
     fillValues: true,
     triggerEvents: true,
-    searchUrls: true,
-    jsonOutput: true,
     maxExecTime: 100000, // 100 seconds
     XHRTimeout: 5000,
     httpAuth: false,
@@ -22,9 +20,7 @@ window.options = {
     userAgent: 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36',
     setCookies: [],
     excludedUrls: [],
-    maximumRecursion: 50,
-    printUnknownRequests: false, // unknown requests are for example mailto: and javascript: urls
-    maximumXHRStackSize: 30,
+
     // map input names to string generators. see generateRandomValues to see all available generators
     inputNameMatchValue: [ // regexps NEED to be string to get passed to phantom page
         {name: "mail", value: "email"},

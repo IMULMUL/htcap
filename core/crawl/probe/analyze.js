@@ -24,11 +24,9 @@ phantom.injectJs("constants.js");
 phantom.injectJs("probe.js");
 
 
-var startTime = Date.now();
+window.startTime = Date.now();
 
-
-var site = "";
-var response = null;
+window.response = null;
 
 var headers = {};
 
@@ -37,17 +35,17 @@ var random = "IsHOulDb34RaNd0MsTR1ngbUt1mN0t";
 
 var args = getopt(system.args, "A:R:x:ftX:HOPD:c:p:r:");
 
-for (var a = 0; a < args.opts.length; a++) {
-    switch (args.opts[a][0]) {
+args.opts.forEach(function (arg) {
+    switch (arg[0]) {
 
         case "A": // -A <user agent> set user agent
-            options.userAgent = args.opts[a][1];
+            options.userAgent = arg[1];
             break;
         case "R": // -R <string>     random string used to generate random values - the same random string will generate the same random values
-            random = args.opts[a][1];
+            random = arg[1];
             break;
         case "x": // -x <seconds>    maximum execution time
-            options.maxExecTime = parseInt(args.opts[a][1]) * 1000;
+            options.maxExecTime = parseInt(arg[1]) * 1000;
             break;
 
         case "f": // -f do NOT fill values in forms
@@ -57,7 +55,7 @@ for (var a = 0; a < args.opts.length; a++) {
             options.triggerEvents = false;
             break;
         case "X": // -X comma separated list of excluded urls
-            options.excludedUrls = args.opts[a][1].split(",");
+            options.excludedUrls = arg[1].split(",");
             break;
         case "O": // -O do NOT override timeout functions
             options.overrideTimeoutFunctions = false;
@@ -67,11 +65,11 @@ for (var a = 0; a < args.opts.length; a++) {
             page_settings.operation = "POST";
             break;
         case "D": // -D POST data
-            page_settings.data = args.opts[a][1];
+            page_settings.data = arg[1];
             break;
         case "c": // -c <path> set cookies from file (json)
             try {
-                var cookie_file = fs.read(args.opts[a][1]);
+                var cookie_file = fs.read(arg[1]);
                 options.setCookies = JSON.parse(cookie_file);
             } catch (e) {
                 console.log(e);
@@ -79,20 +77,18 @@ for (var a = 0; a < args.opts.length; a++) {
             }
             break;
         case "p": // -p <user:pass>  http auth
-            var arr = args.opts[a][1].split(":");
+            var arr = arg[1].split(":");
             options.httpAuth = [arr[0], arr.slice(1).join(":")];
             break;
         case "r": // -r <url> set referer
-            options.referer = args.opts[a][1];
+            options.referer = arg[1];
             break;
-
     }
-}
+});
 
+var site = args.args[1];
 
-site = args.args[1];
-
-if (site.length < 4 || site.substring(0, 4).toLowerCase() != "http") {
+if (site.length < 4 || site.substring(0, 4).toLowerCase() !== "http") {
     site = "http://" + site;
 }
 
@@ -127,7 +123,7 @@ page.settings.loadImages = false;
 
 
 page.onResourceReceived = function (resource) {
-    if (window.response == null) {
+    if (window.response === null) {
         window.response = resource;
         // @TODO sanytize response.contentType
 
@@ -166,7 +162,7 @@ page.onNavigationRequested = function (url, type) {
     page.navigationLocked = true;
 };
 
-page.onConfirm = function (msg) {
+page.onConfirm = function () {
     return true;
 }; // recently changed
 
@@ -244,14 +240,14 @@ page.open(site, page_settings, function (status) {
     if (status !== 'success') {
         var mess = "";
         var out = {response: response};
-        if (!response || response.headers.length == 0) {
+        if (!response || response.headers.length === 0) {
             printStatus("error", "load");
             phantom.exit(1);
         }
 
         // check for redirect first
         for (var a = 0; a < response.headers.length; a++) {
-            if (response.headers[a].name.toLowerCase() == 'location') {
+            if (response.headers[a].name.toLowerCase() === 'location') {
 
                 printCookies();
                 printStatus("ok", null, null, response.headers[a].value);
