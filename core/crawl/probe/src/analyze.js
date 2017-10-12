@@ -18,10 +18,10 @@ window.page = page;
 window.fs = fs;
 
 
-phantom.injectJs("functions.js");
-phantom.injectJs("options.js");
-phantom.injectJs("constants.js");
-phantom.injectJs("probe.js");
+phantom.injectJs('functions.js');
+phantom.injectJs('options.js');
+phantom.injectJs('constants.js');
+phantom.injectJs('probe.js');
 
 
 window.startTime = Date.now();
@@ -30,44 +30,44 @@ window.response = null;
 
 var headers = {};
 
-var page_settings = {encoding: "utf8"};
-var random = "IsHOulDb34RaNd0MsTR1ngbUt1mN0t";
+var page_settings = {encoding: 'utf8'};
+var random = 'IsHOulDb34RaNd0MsTR1ngbUt1mN0t';
 
-var args = getopt(system.args, "A:R:x:ftX:HOPD:c:p:r:");
+var args = getopt(system.args, 'A:R:x:ftX:HOPD:c:p:r:');
 
-args.opts.forEach(function (arg) {
+args.opts.forEach(function(arg) {
     switch (arg[0]) {
 
-        case "A": // -A <user agent> set user agent
+        case 'A': // -A <user agent> set user agent
             options.userAgent = arg[1];
             break;
-        case "R": // -R <string>     random string used to generate random values - the same random string will generate the same random values
+        case 'R': // -R <string>     random string used to generate random values - the same random string will generate the same random values
             random = arg[1];
             break;
-        case "x": // -x <seconds>    maximum execution time
+        case 'x': // -x <seconds>    maximum execution time
             options.maxExecTime = parseInt(arg[1]) * 1000;
             break;
 
-        case "f": // -f do NOT fill values in forms
+        case 'f': // -f do NOT fill values in forms
             options.fillValues = false;
             break;
-        case "t": // -t do NOT trigger events (onload only)
+        case 't': // -t do NOT trigger events (onload only)
             options.triggerEvents = false;
             break;
-        case "X": // -X comma separated list of excluded urls
-            options.excludedUrls = arg[1].split(",");
+        case 'X': // -X comma separated list of excluded urls
+            options.excludedUrls = arg[1].split(',');
             break;
-        case "O": // -O do NOT override timeout functions
+        case 'O': // -O do NOT override timeout functions
             options.overrideTimeoutFunctions = false;
             break;
 
-        case "P": // -P load page with POST
-            page_settings.operation = "POST";
+        case 'P': // -P load page with POST
+            page_settings.operation = 'POST';
             break;
-        case "D": // -D POST data
+        case 'D': // -D POST data
             page_settings.data = arg[1];
             break;
-        case "c": // -c <path> set cookies from file (json)
+        case 'c': // -c <path> set cookies from file (json)
             try {
                 var cookie_file = fs.read(arg[1]);
                 options.setCookies = JSON.parse(cookie_file);
@@ -76,11 +76,11 @@ args.opts.forEach(function (arg) {
                 phantom.exit(1);
             }
             break;
-        case "p": // -p <user:pass>  http auth
-            var arr = arg[1].split(":");
-            options.httpAuth = [arr[0], arr.slice(1).join(":")];
+        case 'p': // -p <user:pass>  http auth
+            var arr = arg[1].split(':');
+            options.httpAuth = [arr[0], arr.slice(1).join(':')];
             break;
-        case "r": // -r <url> set referer
+        case 'r': // -r <url> set referer
             options.referer = arg[1];
             break;
     }
@@ -88,21 +88,21 @@ args.opts.forEach(function (arg) {
 
 var site = args.args[1];
 
-if (site.length < 4 || site.substring(0, 4).toLowerCase() !== "http") {
-    site = "http://" + site;
+if (site.length < 4 || site.substring(0, 4).toLowerCase() !== 'http') {
+    site = 'http://' + site;
 }
 
-console.log("[");
+console.log('[');
 
 /* maximum execution time */
 setTimeout(execTimedOut, options.maxExecTime);
 
 
-phantom.onError = function (msg, trace) {
+phantom.onError = function(msg, trace) {
     var msgStack = ['PHANTOM ERROR: ' + msg];
     if (trace && trace.length) {
         msgStack.push('TRACE:');
-        trace.forEach(function (t) {
+        trace.forEach(function(t) {
             msgStack.push(' -> ' + (t.file || t.sourceURL) + ': ' + t.line + (t.function ? ' (in function ' + t.function + ')' : ''));
         });
     }
@@ -111,18 +111,18 @@ phantom.onError = function (msg, trace) {
 };
 
 
-page.onConsoleMessage = function (msg, lineNum, sourceId) {
+page.onConsoleMessage = function(msg, lineNum, sourceId) {
 };
-page.onError = function (msg, lineNum, sourceId) {
+page.onError = function(msg, lineNum, sourceId) {
 };
-page.onAlert = function (msg) {
+page.onAlert = function(msg) {
 };
 
 page.settings.userAgent = options.userAgent;
 page.settings.loadImages = false;
 
 
-page.onResourceReceived = function (resource) {
+page.onResourceReceived = function(resource) {
     if (window.response === null) {
         window.response = resource;
         // @TODO sanytize response.contentType
@@ -131,19 +131,20 @@ page.onResourceReceived = function (resource) {
 };
 
 
-page.onResourceRequested = function (requestData, networkRequest) {
+page.onResourceRequested = function(requestData, networkRequest) {
     //console.log(JSON.stringify(requestData))
 };
 
 // to detect window.location= / document.location.href=
-page.onNavigationRequested = function (url, type) {
+page.onNavigationRequested = function(url, type) {
 
     if (page.navigationLocked === true) {
-        page.evaluate(function (url, type) {
-            if (type === "LinkClicked")
+        page.evaluate(function(url, type) {
+            if (type === 'LinkClicked') {
                 return;
+            }
 
-            if (type === 'Other' && url !== "about:blank") {
+            if (type === 'Other' && url !== 'about:blank') {
                 window.__PROBE__.printLink(url);
             }
 
@@ -154,7 +155,7 @@ page.onNavigationRequested = function (url, type) {
     // allow the navigation if only the hash is changed
     if (page.navigationLocked === true && compareUrls(url, site)) {
         page.navigationLocked = false;
-        page.evaluate(function (url) {
+        page.evaluate(function(url) {
             document.location.href = url;
         }, url);
     }
@@ -162,7 +163,7 @@ page.onNavigationRequested = function (url, type) {
     page.navigationLocked = true;
 };
 
-page.onConfirm = function () {
+page.onConfirm = function() {
     return true;
 }; // recently changed
 
@@ -171,12 +172,14 @@ page.onConfirm = function () {
  https://github.com/ariya/phantomjs/issues/11684
  */
 var isPageInitialized = false;
-page.onInitialized = function () {
-    if (isPageInitialized) return;
+page.onInitialized = function() {
+    if (isPageInitialized) {
+        return;
+    }
     isPageInitialized = true;
 
     // try to hide phantomjs
-    page.evaluate(function () {
+    page.evaluate(function() {
         window.__callPhantom = window.callPhantom;
         delete window.callPhantom;
     });
@@ -186,18 +189,18 @@ page.onInitialized = function () {
 };
 
 
-page.onCallback = function (data) {
+page.onCallback = function(data) {
     switch (data.cmd) {
-        case "print":
+        case 'print':
             console.log(data.argument);
             break;
 
-        case "end":
-            page.evaluate(function () {
+        case 'end':
+            page.evaluate(function() {
                 window.__PROBE__.printRequests();
             });
 
-            printStatus("ok", window.response.contentType);
+            printStatus('ok', window.response.contentType);
             phantom.exit(0);
             break;
     }
@@ -205,7 +208,7 @@ page.onCallback = function (data) {
 
 
 if (options.httpAuth) {
-    headers['Authorization'] = 'Basic ' + btoa(options.httpAuth[0] + ":" + options.httpAuth[1]);
+    headers['Authorization'] = 'Basic ' + btoa(options.httpAuth[0] + ':' + options.httpAuth[1]);
 }
 
 if (options.referer) {
@@ -218,12 +221,13 @@ page.customHeaders = headers;
 for (var a = 0; a < options.setCookies.length; a++) {
     // maybe this is wrogn acconding to rfc .. but phantomjs cannot set cookie witout a domain...
     if (!options.setCookies[a].domain) {
-        var purl = document.createElement("a");
+        var purl = document.createElement('a');
         purl.href = site;
-        options.setCookies[a].domain = purl.hostname
+        options.setCookies[a].domain = purl.hostname;
     }
-    if (options.setCookies[a].expires)
+    if (options.setCookies[a].expires) {
         options.setCookies[a].expires *= 1000;
+    }
 
     phantom.addCookie(options.setCookies[a]);
 
@@ -231,17 +235,17 @@ for (var a = 0; a < options.setCookies.length; a++) {
 
 page.viewportSize = {
     width: 1920,
-    height: 1080
+    height: 1080,
 };
 
 
-page.open(site, page_settings, function (status) {
+page.open(site, page_settings, function(status) {
     var response = window.response; // just to be clear
     if (status !== 'success') {
-        var mess = "";
+        var mess = '';
         var out = {response: response};
         if (!response || response.headers.length === 0) {
-            printStatus("error", "load");
+            printStatus('error', 'load');
             phantom.exit(1);
         }
 
@@ -250,7 +254,7 @@ page.open(site, page_settings, function (status) {
             if (response.headers[a].name.toLowerCase() === 'location') {
 
                 printCookies();
-                printStatus("ok", null, null, response.headers[a].value);
+                printStatus('ok', null, null, response.headers[a].value);
                 phantom.exit(0);
             }
         }
@@ -265,11 +269,11 @@ page.open(site, page_settings, function (status) {
 
     assertContentTypeHtml(response);
 
-    page.evaluate(function () {
-        console.log("startAnalysis");
+    page.evaluate(function() {
+        console.log('startAnalysis');
         // starting page analysis
         window.__PROBE__.startAnalysis();
-    })
+    });
 
 
 });

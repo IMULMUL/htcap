@@ -3,3 +3,4 @@ tmp.py
 .idea
 *.db
 tmp
+/core/crawl/probe/node_modules/
