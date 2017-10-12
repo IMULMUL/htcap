@@ -70,9 +70,6 @@ class CrawlerThread(threading.Thread):
 
                     requests = probe.requests
 
-                    if probe.html:
-                        request.html = probe.html
-
                     if len(probe.user_output) > 0:
                         request.user_output = probe.user_output
 
@@ -166,8 +163,6 @@ class CrawlerThread(threading.Thread):
 
         if Shared.options['set_referer'] and request.referer:
             params.extend(("-r", request.referer))
-
-        params.extend(("-i", str(request.db_id)))
 
         params.append(url)
 

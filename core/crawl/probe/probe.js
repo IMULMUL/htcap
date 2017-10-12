@@ -388,12 +388,6 @@
             this.addToRequestToPrint(req);
         };
 
-        Probe.prototype.printPageHTML = function () {
-            var html = document.documentElement.innerHTML;
-            var json = '["html",' + JSON.stringify(html) + '],';
-            _print(json);
-        };
-
         Probe.prototype.getRandomValue = function (type) {
             if (!(type in this._inputValues))
                 type = "string";
@@ -643,13 +637,11 @@
         Probe.prototype._getEventsForElement = function (element) {
             var events = [];
 
-            if (this._options.triggerAllMappedEvents) {
-                var map = this._eventsMap;
-                for (var a = 0; a < map.length; a++) {
-                    if (map[a].element === element) {
-                        events = map[a].events.slice();
-                        break;
-                    }
+            var map = this._eventsMap;
+            for (var a = 0; a < map.length; a++) {
+                if (map[a].element === element) {
+                    events = map[a].events.slice();
+                    break;
                 }
             }
 
@@ -726,9 +718,7 @@
         Probe.prototype._analyzeDOMElement = function (element) {
 
             // map property events and fill input values
-            if (this._options.mapEvents) {
-                this._mapElementEvents(element);
-            }
+            this._mapElementEvents(element);
 
             if (this._options.fillValues) {
                 // Parsing the current element and set values for each element within

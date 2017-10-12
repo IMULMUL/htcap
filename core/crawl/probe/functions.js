@@ -25,7 +25,9 @@ function getopt(arguments, optstring) {
                     ret.opts.push([m[a][0], args[ai + 1]]);
                     args.splice(ai, 2);
                 } else {
-                    return "missing argumnet for option " + m[a][0];
+                    // Error: log and kill
+                    console.log("Error: " + args);
+                    phantom.exit(-1);
                 }
             } else {
                 ret.opts.push([m[a][0]]);
@@ -98,142 +100,6 @@ function execTimedOut() {
     phantom.exit(0);
 
 }
-
-
-function usage() {
-    var usage = "Usage: analyze.js [options] <url>\n" +
-        "  -V              verbose\n" +
-        "  -a              don't check ajax\n" +
-        "  -f              don't fill values\n" +
-        "  -t              don't trigger events (onload only)\n" +
-        "  -s              don't check websockets\n" +
-        "  -M              dont' map events\n" +
-        "  -T              don't trigger mapped events\n" +
-        "  -S              don't check for <script> insertion\n" +
-        "  -P              load page with POST\n" +
-        "  -D              POST data\n" +
-        "  -R <string>     random string used to generate random values - the same random string will generate the same random values\n" +
-        "  -X              comma separated list of excluded urls\n" +
-        "  -C              don't get cookies\n" +
-        "  -c <path>       set cookies from file (json)\n" +
-        "  -p <user:pass>  http auth \n" +
-        "  -x <seconds>    maximum execution time \n" +
-        "  -A <user agent> set user agent \n" +
-        "  -r <url>        set referer \n" +
-        "  -H              return generated html \n" +
-        "  -I              load images\n" +
-        "  -O              dont't override timeout functions\n" +
-        "  -K              keep elements in the DOM (prevent removal)" +
-        console.log(usage);
-}
-
-
-function parseArgsToOptions(args) {
-
-    for (var a = 0; a < args.opts.length; a++) {
-        switch (args.opts[a][0]) {
-            case "V":
-                options.verbose = true;
-                break;
-            case "a":
-                options.checkAjax = false;
-                break;
-            case "f":
-                options.fillValues = false;
-                break;
-            case "t":
-                options.triggerEvents = false;
-                break;
-            case "d":
-                options.printAjaxPostData = false;
-                break;
-            case "S":
-                options.checkScriptInsertion = false;
-                break;
-            case "I":
-                options.loadImages = true;
-                break;
-            case "C":
-                options.getCookies = false;
-                break;
-
-            case "c":
-                try {
-                    var cookie_file = fs.read(args.opts[a][1]);
-                    options.setCookies = JSON.parse(cookie_file);
-                } catch (e) {
-                    console.log(e);
-                    phantom.exit(1);
-                }
-
-                break;
-            case "p":
-                var arr = args.opts[a][1].split(":");
-                options.httpAuth = [arr[0], arr.slice(1).join(":")];
-                break;
-            case "M":
-                options.mapEvents = false;
-                break;
-            case "T":
-                options.triggerAllMappedEvents = false;
-                break;
-            case "s":
-                options.checkWebsockets = false;
-                break;
-            case "x":
-                options.maxExecTime = parseInt(args.opts[a][1]) * 1000;
-                break;
-            case "A":
-                options.userAgent = args.opts[a][1];
-                break;
-            case "r":
-                options.referer = args.opts[a][1];
-                break;
-            case "m":
-                options.outputMappedEvents = true;
-                break;
-            case "H":
-                options.returnHtml = true;
-                break;
-            case "X":
-                options.excludedUrls = args.opts[a][1].split(",");
-                break;
-            case "O":
-                options.overrideTimeoutFunctions = false;
-                break;
-            case "K":
-                options.preventElementRemoval = true;
-                break;
-        }
-    }
-};
-
-function onNavigationRequested(url, type) {
-
-    if (page.navigationLocked === true) {
-        page.evaluate(function (url, type) {
-            if (type === "LinkClicked")
-                return;
-
-            if (type === 'Other' && url !== "about:blank") {
-                window.__PROBE__.printLink(url);
-            }
-
-        }, url, type);
-    }
-
-
-    // allow the navigation if only the hash is changed
-    if (page.navigationLocked === true && compareUrls(url, site)) {
-        page.navigationLocked = false;
-        page.evaluate(function (url) {
-            document.location.href = url;
-        }, url);
-    }
-
-    page.navigationLocked = true;
-}
-
 
 // generates PSEUDO random values. the same seed will generate the same values
 function generateRandomValues(seed) {
@@ -358,113 +224,103 @@ function startProbe(random) {
 
     page.evaluate(function (options) {
 
-        if (options.mapEvents) {
+        Node.prototype.__originalAddEventListener = Node.prototype.addEventListener;
+        Node.prototype.addEventListener = function () {
+            if (arguments[0] !== "DOMContentLoaded") { // is this ok???
+                window.__PROBE__.addEventToMap(this, arguments[0]);
+            }
+            this.__originalAddEventListener.apply(this, arguments);
+        };
 
-            Node.prototype.__originalAddEventListener = Node.prototype.addEventListener;
-            Node.prototype.addEventListener = function () {
-                if (arguments[0] !== "DOMContentLoaded") { // is this ok???
-                    window.__PROBE__.addEventToMap(this, arguments[0]);
+        window.__originalAddEventListener = window.addEventListener;
+        window.addEventListener = function () {
+            if (arguments[0] !== "load") { // is this ok???
+                window.__PROBE__.addEventToMap(this, arguments[0]);
+            }
+            window.__originalAddEventListener.apply(this, arguments);
+        };
+
+        XMLHttpRequest.prototype.__originalOpen = XMLHttpRequest.prototype.open;
+        XMLHttpRequest.prototype.open = function (method, url, async, user, password) {
+
+            var _url = window.__PROBE__.removeUrlParameter(url, "_");
+            this.__request = new window.__PROBE__.Request("xhr", method, _url);
+
+            // adding XHR listener
+            this.addEventListener('readystatechange', function () {
+                // if not finish, it's open
+                // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/readyState
+                if (this.readyState >= 1 && this.readyState < 4) {
+                    window.__PROBE__.eventLoopManager.sentXHR(this);
+                } else if (this.readyState === 4) {
+                    // /!\ DONE means that the XHR finish but could have FAILED
+                    window.__PROBE__.eventLoopManager.doneXHR(this);
                 }
-                this.__originalAddEventListener.apply(this, arguments);
-            };
+            });
+            this.addEventListener('error', function () {
+                window.__PROBE__.eventLoopManager.inErrorXHR(this);
+            });
+            this.addEventListener('abort', function () {
+                window.__PROBE__.eventLoopManager.inErrorXHR(this);
+            });
+            this.addEventListener('timeout', function () {
+                window.__PROBE__.eventLoopManager.inErrorXHR(this);
+            });
 
-            window.__originalAddEventListener = window.addEventListener;
-            window.addEventListener = function () {
-                if (arguments[0] !== "load") { // is this ok???
-                    window.__PROBE__.addEventToMap(this, arguments[0]);
+            this.timeout = options.XHRTimeout;
+
+            return this.__originalOpen(method, url, async, user, password);
+        };
+
+        XMLHttpRequest.prototype.__originalSend = XMLHttpRequest.prototype.send;
+        XMLHttpRequest.prototype.send = function (data) {
+            this.__request.data = data;
+            this.__request.triggerer = window.__PROBE__.getLastTriggerPageEvent();
+
+            var absurl = window.__PROBE__.getAbsoluteUrl(this.__request.url);
+            for (var a = 0; a < options.excludedUrls.length; a++) {
+                if (absurl.match(options.excludedUrls[a])) {
+                    this.__skipped = true;
                 }
-                window.__originalAddEventListener.apply(this, arguments);
-            };
-        }
+            }
 
-        if (options.checkAjax) {
-            XMLHttpRequest.prototype.__originalOpen = XMLHttpRequest.prototype.open;
-            XMLHttpRequest.prototype.open = function (method, url, async, user, password) {
+            // check if request has already been sent
+            var requestKey = this.__request.key;
+            if (window.__PROBE__.sentXHRs.indexOf(requestKey) !== -1) {
+                return;
+            }
 
-                var _url = window.__PROBE__.removeUrlParameter(url, "_");
-                this.__request = new window.__PROBE__.Request("xhr", method, _url);
+            window.__PROBE__.sentXHRs.push(requestKey);
+            window.__PROBE__.addToRequestToPrint(this.__request);
 
-                // adding XHR listener
-                this.addEventListener('readystatechange', function () {
-                    // if not finish, it's open
-                    // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/readyState
-                    if (this.readyState >= 1 && this.readyState < 4) {
-                        window.__PROBE__.eventLoopManager.sentXHR(this);
-                    } else if (this.readyState === 4) {
-                        // /!\ DONE means that the XHR finish but could have FAILED
-                        window.__PROBE__.eventLoopManager.doneXHR(this);
-                    }
-                });
-                this.addEventListener('error', function () {
-                    window.__PROBE__.eventLoopManager.inErrorXHR(this);
-                });
-                this.addEventListener('abort', function () {
-                    window.__PROBE__.eventLoopManager.inErrorXHR(this);
-                });
-                this.addEventListener('timeout', function () {
-                    window.__PROBE__.eventLoopManager.inErrorXHR(this);
-                });
+            if (!this.__skipped)
+                return this.__originalSend(data);
+        };
 
-                this.timeout = options.XHRTimeout;
+        Node.prototype.__originalAppendChild = Node.prototype.appendChild;
+        Node.prototype.appendChild = function (node) {
+            window.__PROBE__.printJSONP(node);
+            return this.__originalAppendChild(node);
+        };
 
-                return this.__originalOpen(method, url, async, user, password);
-            };
+        Node.prototype.__originalInsertBefore = Node.prototype.insertBefore;
+        Node.prototype.insertBefore = function (node, element) {
+            window.__PROBE__.printJSONP(node);
+            return this.__originalInsertBefore(node, element);
+        };
 
-            XMLHttpRequest.prototype.__originalSend = XMLHttpRequest.prototype.send;
-            XMLHttpRequest.prototype.send = function (data) {
-                this.__request.data = data;
-                this.__request.triggerer = window.__PROBE__.getLastTriggerPageEvent();
+        Node.prototype.__originalReplaceChild = Node.prototype.replaceChild;
+        Node.prototype.replaceChild = function (node, oldNode) {
+            window.__PROBE__.printJSONP(node);
+            return this.__originalReplaceChild(node, oldNode);
+        };
 
-                var absurl = window.__PROBE__.getAbsoluteUrl(this.__request.url);
-                for (var a = 0; a < options.excludedUrls.length; a++) {
-                    if (absurl.match(options.excludedUrls[a])) {
-                        this.__skipped = true;
-                    }
-                }
-
-                // check if request has already been sent
-                var requestKey = this.__request.key;
-                if (window.__PROBE__.sentXHRs.indexOf(requestKey) !== -1) {
-                    return;
-                }
-
-                window.__PROBE__.sentXHRs.push(requestKey);
-                window.__PROBE__.addToRequestToPrint(this.__request);
-
-                if (!this.__skipped)
-                    return this.__originalSend(data);
-            };
-        }
-
-        if (options.checkScriptInsertion) {
-
-            Node.prototype.__originalAppendChild = Node.prototype.appendChild;
-            Node.prototype.appendChild = function (node) {
-                window.__PROBE__.printJSONP(node);
-                return this.__originalAppendChild(node);
-            };
-
-            Node.prototype.__originalInsertBefore = Node.prototype.insertBefore;
-            Node.prototype.insertBefore = function (node, element) {
-                window.__PROBE__.printJSONP(node);
-                return this.__originalInsertBefore(node, element);
-            };
-
-            Node.prototype.__originalReplaceChild = Node.prototype.replaceChild;
-            Node.prototype.replaceChild = function (node, oldNode) {
-                window.__PROBE__.printJSONP(node);
-                return this.__originalReplaceChild(node, oldNode);
-            };
-        }
-
-        if (options.checkWebsockets) {
-            window.WebSocket = (function (WebSocket) {
-                return function (url, protocols) {
-                    window.__PROBE__.printWebsocket(url); //websockets.push(url);
-                    return WebSocket.prototype;
-                }
-            })(window.WebSocket);
-        }
+        window.WebSocket = (function (WebSocket) {
+            return function (url, protocols) {
+                window.__PROBE__.printWebsocket(url); //websockets.push(url);
+                return WebSocket.prototype;
+            }
+        })(window.WebSocket);
 
         if (options.overrideTimeoutFunctions) {
             window.__originalSetTimeout = window.setTimeout;
@@ -481,13 +337,6 @@ function startProbe(random) {
                 return window.__originalSetInterval.apply(this, arguments);
             };
 
-        }
-
-        if (options.preventElementRemoval) {
-            Node.prototype.__originalRemoveChild = Node.prototype.removeChild;
-            Node.prototype.removeChild = function (node) {
-                return node;
-            };
         }
 
         HTMLFormElement.prototype.__originalSubmit = HTMLFormElement.prototype.submit;
@@ -530,7 +379,7 @@ function startProbe(random) {
 function checkContentType(ctype) {
     ctype = ctype || ""
     return (ctype.toLowerCase().split(";")[0] == "text/html");
-};
+}
 
 function assertContentTypeHtml(response) {
     if (!checkContentType(response.contentType)) {

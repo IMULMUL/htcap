@@ -58,7 +58,6 @@ CRAWLER_DEFAULTS = {
     "group_qs": False,
     "user_agent": 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 '
                   '(KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36',
-    "save_html": False,
     "override_timeout_functions": True,
     "crawl_forms": True,  # only if mode == CRAWLMODE_AGGRESSIVE
     "random_seed": "",

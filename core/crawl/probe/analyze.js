@@ -29,48 +29,68 @@ var startTime = Date.now();
 
 var site = "";
 var response = null;
-//var showHelp = false;
 
 var headers = {};
-
-var args = getopt(system.args, "hVaftUJdICc:MSEp:Tsx:A:r:mHX:PD:R:Oi:");
 
 var page_settings = {encoding: "utf8"};
 var random = "IsHOulDb34RaNd0MsTR1ngbUt1mN0t";
 
-
-if (typeof args == 'string') {
-    console.log("Error: " + args);
-    phantom.exit(-1);
-}
+var args = getopt(system.args, "A:R:x:ftX:HOPD:c:p:r:");
 
 for (var a = 0; a < args.opts.length; a++) {
     switch (args.opts[a][0]) {
-        case "h":
-            usage();
-            phantom.exit(1);
+
+        case "A": // -A <user agent> set user agent
+            options.userAgent = args.opts[a][1];
             break;
-        case "P":
-            page_settings.operation = "POST";
-            break;
-        case "D":
-            page_settings.data = args.opts[a][1];
-            break;
-        case "R":
+        case "R": // -R <string>     random string used to generate random values - the same random string will generate the same random values
             random = args.opts[a][1];
             break;
+        case "x": // -x <seconds>    maximum execution time
+            options.maxExecTime = parseInt(args.opts[a][1]) * 1000;
+            break;
+
+        case "f": // -f do NOT fill values in forms
+            options.fillValues = false;
+            break;
+        case "t": // -t do NOT trigger events (onload only)
+            options.triggerEvents = false;
+            break;
+        case "X": // -X comma separated list of excluded urls
+            options.excludedUrls = args.opts[a][1].split(",");
+            break;
+        case "O": // -O do NOT override timeout functions
+            options.overrideTimeoutFunctions = false;
+            break;
+
+        case "P": // -P load page with POST
+            page_settings.operation = "POST";
+            break;
+        case "D": // -D POST data
+            page_settings.data = args.opts[a][1];
+            break;
+        case "c": // -c <path> set cookies from file (json)
+            try {
+                var cookie_file = fs.read(args.opts[a][1]);
+                options.setCookies = JSON.parse(cookie_file);
+            } catch (e) {
+                console.log(e);
+                phantom.exit(1);
+            }
+            break;
+        case "p": // -p <user:pass>  http auth
+            var arr = args.opts[a][1].split(":");
+            options.httpAuth = [arr[0], arr.slice(1).join(":")];
+            break;
+        case "r": // -r <url> set referer
+            options.referer = args.opts[a][1];
+            break;
+
     }
 }
 
 
-parseArgsToOptions(args);
-
 site = args.args[1];
-
-if (!site) {
-    usage();
-    phantom.exit(-1);
-}
 
 if (site.length < 4 || site.substring(0, 4).toLowerCase() != "http") {
     site = "http://" + site;
@@ -96,21 +116,14 @@ phantom.onError = function (msg, trace) {
 
 
 page.onConsoleMessage = function (msg, lineNum, sourceId) {
-    if (options.verbose)
-        console.log("console: " + msg);
-}
+};
 page.onError = function (msg, lineNum, sourceId) {
-    if (options.verbose)
-        console.log("console error: on   " + JSON.stringify(lineNum) + " " + msg);
-}
-
+};
 page.onAlert = function (msg) {
-    if (options.verbose)
-        console.log('ALERT: ' + msg);
 };
 
 page.settings.userAgent = options.userAgent;
-page.settings.loadImages = options.loadImages;
+page.settings.loadImages = false;
 
 
 page.onResourceReceived = function (resource) {
@@ -127,7 +140,31 @@ page.onResourceRequested = function (requestData, networkRequest) {
 };
 
 // to detect window.location= / document.location.href=
-page.onNavigationRequested = onNavigationRequested;
+page.onNavigationRequested = function (url, type) {
+
+    if (page.navigationLocked === true) {
+        page.evaluate(function (url, type) {
+            if (type === "LinkClicked")
+                return;
+
+            if (type === 'Other' && url !== "about:blank") {
+                window.__PROBE__.printLink(url);
+            }
+
+        }, url, type);
+    }
+
+
+    // allow the navigation if only the hash is changed
+    if (page.navigationLocked === true && compareUrls(url, site)) {
+        page.navigationLocked = false;
+        page.evaluate(function (url) {
+            document.location.href = url;
+        }, url);
+    }
+
+    page.navigationLocked = true;
+};
 
 page.onConfirm = function (msg) {
     return true;
@@ -163,12 +200,6 @@ page.onCallback = function (data) {
             page.evaluate(function () {
                 window.__PROBE__.printRequests();
             });
-
-            if (options.returnHtml) {
-                page.evaluate(function (options) {
-                    window.__PROBE__.printPageHTML();
-                }, options);
-            }
 
             printStatus("ok", window.response.contentType);
             phantom.exit(0);
@@ -222,9 +253,7 @@ page.open(site, page_settings, function (status) {
         for (var a = 0; a < response.headers.length; a++) {
             if (response.headers[a].name.toLowerCase() == 'location') {
 
-                if (options.getCookies) {
-                    printCookies();
-                }
+                printCookies();
                 printStatus("ok", null, null, response.headers[a].value);
                 phantom.exit(0);
             }
@@ -236,9 +265,7 @@ page.open(site, page_settings, function (status) {
     }
 
 
-    if (options.getCookies) {
-        printCookies();
-    }
+    printCookies();
 
     assertContentTypeHtml(response);
 
