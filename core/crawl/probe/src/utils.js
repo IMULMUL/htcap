@@ -162,6 +162,7 @@
         if (args.referer !== '') {
             options.referer = args.referer;
         }
+
         if (args.httpAuth !== '') {
             let a = args.httpAuth.split(':');
             options.httpAuth = [
