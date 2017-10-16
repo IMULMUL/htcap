@@ -1,21 +1,30 @@
 (function() {
     'use strict';
 
+    const process = require('process');
+
+    const logger = require('./logger');
+    const puppeteer = require('puppeteer');
+
     // const analyse = require('./src/analyze');
     // const probe = require('./src/probe');
+
     // const constants = require('./src/constants');
     const utils = require('./src/utils');
-
-    const puppeteer = require('puppeteer');
     let browser = undefined;
 
     let options = utils.getOptionsFromArgs();
 
+    // handling SIGINT signal
+    process.on('SIGINT', function() {
+        process.exit();
+    });
+
     // DEBUG:
-    console.log(options);
+    logger.debug(options);
 
     function _getPage() {
-        return puppeteer.launch({headless: false})
+        return puppeteer.launch()
             .then(function(createdBrowser) {
                 browser = createdBrowser;
                 return createdBrowser.newPage();

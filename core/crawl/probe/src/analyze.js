@@ -10,12 +10,13 @@
 
 // TODO: stop using console.log() to transmit data to crawler thread
 
-var system = require('system');
-var fs = require('fs');
-var page = require('webpage').create();
+// var system = require('system');
+// var fs = require('fs');
+var page = require('webpage')
+    .create();
 
 window.page = page;
-window.fs = fs;
+// window.fs = fs;
 
 
 phantom.injectJs('functions.js');
@@ -31,35 +32,55 @@ window.response = null;
 var headers = {};
 
 var page_settings = {encoding: 'utf8'};
-var random = 'IsHOulDb34RaNd0MsTR1ngbUt1mN0t';
+// var random = 'IsHOulDb34RaNd0MsTR1ngbUt1mN0t';
 
-var args = getopt(system.args, 'A:R:x:ftX:HOPD:c:p:r:');
+var args = [];//getopt(system.args, 'A:R:x:ftX:HOPD:c:p:r:');
 
 args.opts.forEach(function(arg) {
     switch (arg[0]) {
 
-        case 'A': // -A <user agent> set user agent
-            options.userAgent = arg[1];
-            break;
-        case 'R': // -R <string>     random string used to generate random values - the same random string will generate the same random values
-            random = arg[1];
-            break;
-        case 'x': // -x <seconds>    maximum execution time
-            options.maxExecTime = parseInt(arg[1]) * 1000;
-            break;
-
-        case 'f': // -f do NOT fill values in forms
-            options.fillValues = false;
-            break;
-        case 't': // -t do NOT trigger events (onload only)
-            options.triggerEvents = false;
-            break;
-        case 'X': // -X comma separated list of excluded urls
-            options.excludedUrls = arg[1].split(',');
-            break;
-        case 'O': // -O do NOT override timeout functions
-            options.overrideTimeoutFunctions = false;
-            break;
+        // case 'A': // -A <user agent> set user agent
+        //     options.userAgent = arg[1];
+        //     break;
+        // case 'R': // -R <string>     random string used to generate random values - the same random string will generate the same random values
+        //     options.random = arg[1];
+        //     break;
+        // case 'x': // -x <seconds>    maximum execution time
+        //     options.maxExecTime = parseInt(arg[1]) * 1000;
+        //     break;
+        //
+        // case 'f': // -f do NOT fill values in forms
+        //     options.fillValues = false;
+        //     break;
+        // case 't': // -t do NOT trigger events (onload only)
+        //     options.triggerEvents = false;
+        //     break;
+        // case 'X': // -X comma separated list of excluded urls
+        //     options.excludedUrls = arg[1].split(',');
+        //     break;
+        // case 'O': // -O do NOT override timeout functions
+        //     options.overrideTimeoutFunctions = false;
+        //     break;
+        //
+        // case 'c': // -c <path> set cookies from file (json)
+        //     try {
+        //         var cookie_file = fs.read(arg[1]);
+        //         options.cookies = JSON.parse(cookie_file);
+        //     } catch (e) {
+        //         console.log(e);
+        //         phantom.exit(1);
+        //     }
+        //     break;
+        //
+        // case 'r': // -r <url> set referer
+        //     options.referer = arg[1];
+        //     break;
+        //
+        // case 'p': // -p <user:pass>  http auth
+        //     var arr = arg[1].split(':');
+        //     options.httpAuth = [arr[0], arr.slice(1)
+        //         .join(':')];
+        //     break;
 
         case 'P': // -P load page with POST
             page_settings.operation = 'POST';
@@ -67,35 +88,20 @@ args.opts.forEach(function(arg) {
         case 'D': // -D POST data
             page_settings.data = arg[1];
             break;
-        case 'c': // -c <path> set cookies from file (json)
-            try {
-                var cookie_file = fs.read(arg[1]);
-                options.setCookies = JSON.parse(cookie_file);
-            } catch (e) {
-                console.log(e);
-                phantom.exit(1);
-            }
-            break;
-        case 'p': // -p <user:pass>  http auth
-            var arr = arg[1].split(':');
-            options.httpAuth = [arr[0], arr.slice(1).join(':')];
-            break;
-        case 'r': // -r <url> set referer
-            options.referer = arg[1];
-            break;
     }
 });
 
-var site = args.args[1];
-
-if (site.length < 4 || site.substring(0, 4).toLowerCase() !== 'http') {
-    site = 'http://' + site;
-}
+// var site = args.args[1];
+//
+// if (site.length < 4 || site.substring(0, 4)
+//         .toLowerCase() !== 'http') {
+//     site = 'http://' + site;
+// }
 
 console.log('[');
 
 /* maximum execution time */
-setTimeout(execTimedOut, options.maxExecTime);
+// setTimeout(execTimedOut, options.maxExecTime);
 
 
 phantom.onError = function(msg, trace) {
@@ -184,7 +190,7 @@ page.onInitialized = function() {
         delete window.callPhantom;
     });
 
-    startProbe(random);
+    startProbe(options.random);
 
 };
 

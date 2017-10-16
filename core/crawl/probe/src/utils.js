@@ -35,14 +35,14 @@
                 defaultValue: 'IsHOulDb34RaNd0MsTR1ngbUt1mN0t',
             },
         );
-        argumentParser.addArgument(
-            '-x',
-            {
-                help: 'maximum execution time',
-                dest: 'maxExecTime',
-                defaultValue: 100000, // 100 seconds
-            },
-        );
+        // argumentParser.addArgument(
+        //     '-x',
+        //     {
+        //         help: 'maximum execution time',
+        //         dest: 'maxExecTime',
+        //         defaultValue: 100000, // 100 seconds
+        //     },
+        // );
         argumentParser.addArgument(
             '-f',
             {
