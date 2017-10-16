@@ -1,93 +1,241 @@
-/*
- HTCAP - beta 1
- Author: filippo.cavallarin@wearesegment.com
+(function () {
+    'use strict';
 
- This program is free software; you can redistribute it and/or modify it under
- the terms of the GNU General Public License as published by the Free Software
- Foundation; either version 2 of the License, or (at your option) any later
- version.
- */
 
-// @todo error on Unknown option ds
-function getopt(arguments, optstring) {
-    var args = arguments.slice();
-    var ret = {
-        opts: [],
-        args: args
+    exports.getOptionsFromArgs = function () {
+        const ArgsParse = require('../node_modules/argparse').ArgumentParser;
+
+        let argumentParser = new ArgsParse();
+
+        _getArguments(argumentParser);
+
+        let args = argumentParser.parseArgs();
+        let options = _getOptions(args);
+
+        return options;
     };
 
-    var m = optstring.match(/[a-zA-Z]:*/g);
-    for (var a = 0; a < m.length; a++) {
-        var ai = args.indexOf("-" + m[a][0]);
-        if (ai > -1) {
-            if (m[a][1] == ":") {
-                if (args[ai + 1]) {
-                    ret.opts.push([m[a][0], args[ai + 1]]);
-                    args.splice(ai, 2);
-                } else {
-                    // Error: log and kill
-                    console.log("Error: " + args);
-                    phantom.exit(-1);
-                }
-            } else {
-                ret.opts.push([m[a][0]]);
-                args.splice(ai, 1);
-            }
+    function _getArguments(argumentParser) {
+
+        let args;
+
+        argumentParser.addArgument(
+            '-A',
+            {
+                help: 'user agent',
+                dest: 'userAgent',
+                defaultValue: 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36',
+            },
+        );
+        argumentParser.addArgument(
+            '-R',
+            {
+                help: 'random string used to generate random values - the same random string will generate the same random values',
+                dest: 'random',
+                defaultValue: 'IsHOulDb34RaNd0MsTR1ngbUt1mN0t',
+            },
+        );
+        argumentParser.addArgument(
+            '-x',
+            {
+                help: 'maximum execution time',
+                dest: 'maxExecTime',
+                defaultValue: 100000, // 100 seconds
+            },
+        );
+        argumentParser.addArgument(
+            '-f',
+            {
+                help: 'do NOT fill values in forms',
+                dest: 'fillValues',
+                defaultValue: true,
+                nargs: 0,
+                action: 'storeFalse',
+            },
+        );
+        argumentParser.addArgument(
+            '-t',
+            {
+                help: 'do NOT trigger events (onload only)',
+                dest: 'triggerEvents',
+                defaultValue: true,
+                nargs: 0,
+                action: 'storeFalse',
+            },
+        );
+        argumentParser.addArgument(
+            '-X',
+            {
+                help: 'comma separated list of excluded urls',
+                dest: 'excludedUrls',
+                defaultValue: '',
+            },
+        );
+        argumentParser.addArgument(
+            '-O',
+            {
+                help: 'do NOT override timeout functions',
+                dest: 'overrideTimeoutFunctions',
+                defaultValue: true,
+                nargs: 0,
+                action: 'storeFalse',
+            },
+        );
+        argumentParser.addArgument(
+            '-c',
+            {
+                help: 'set cookies from file (json)',
+                dest: 'cookieFilePath',
+                defaultValue: '',
+            },
+        );
+        argumentParser.addArgument(
+            '-r',
+            {
+                help: 'url referer',
+                dest: 'referer',
+                defaultValue: '',
+            },
+        );
+
+        argumentParser.addArgument(
+            '-p',
+            {
+                help: 'http auth (user:pass)',
+                dest: 'httpAuth',
+                defaultValue: '',
+            },
+        );
+        argumentParser.addArgument(
+            '-P',
+            {
+                help: 'load page with POST',
+                dest: 'sendPOST',
+                defaultValue: false,
+                nargs: 0,
+                action: 'storeTrue',
+            },
+        );
+        argumentParser.addArgument(
+            '-D',
+            {
+                help: 'POST data',
+                dest: 'POSTData',
+            },
+        );
+
+        argumentParser.addArgument(
+            'startUrl',
+            {
+                help: 'starting url',
+            },
+        );
+
+        args = argumentParser.parseArgs();
+
+        if (!args.startUrl.match('^http')) {
+            argumentParser.error('invalid starting url: "' + args.startUrl + '"');
         }
+
+        return args;
     }
 
-    return ret;
-}
+    function _getOptions(args) {
+        const fs = require('fs'), url = require('url');
+        let options = {};
 
+        options.userAgent = args.userAgent;
+        options.random = args.random;
+        options.maxExecTime = parseInt(args.maxExecTime) * 1000;
+        options.fillValues = args.fillValues;
+        options.triggerEvents = args.triggerEvents;
+        options.excludedUrls = args.excludedUrls !== '' ? args.excludedUrls.split(',') : [];
+        options.overrideTimeoutFunctions = args.overrideTimeoutFunctions;
+
+        if (args.cookieFilePath !== '') {
+            let data = fs.readFileSync(args.cookieFilePath, 'utf8');
+            options.cookies = JSON.parse(data);
+        } else {
+            options.cookies = [];
+        }
+
+        if (args.referer !== '') {
+            options.referer = args.referer;
+        }
+        if (args.httpAuth !== '') {
+            let a = args.httpAuth.split(':');
+            options.httpAuth = [
+                a[0],
+                a.slice(1)
+                    .join(':'),
+            ];
+        }
+
+        if (args.sendPOST) {
+            options.sendPOST = args.sendPOST;
+            options.POSTData = args.POSTData;
+        }
+
+        options.startUrl = url.parse(args.startUrl);
+
+        return options;
+
+    }
+
+})();
 
 function compareUrls(url1, url2, includeHash) {
-    var a1 = document.createElement("a");
-    var a2 = document.createElement("a");
+    var a1 = document.createElement('a');
+    var a2 = document.createElement('a');
     a1.href = url1;
     a2.href = url2;
 
     var eq = (a1.protocol === a2.protocol && a1.host === a2.host && a1.pathname === a2.pathname && a1.search === a2.search);
 
-    if (includeHash) eq = eq && a1.hash === a2.hash;
+    if (includeHash) {
+        eq = eq && a1.hash === a2.hash;
+    }
 
     return eq;
 }
 
 
 function printCookies() {
-    console.log('["cookies",' + JSON.stringify(phantom.cookies) + "],");
+    console.log('["cookies",' + JSON.stringify(phantom.cookies) + '],');
 }
 
 
 function printStatus(status, errcode, message, redirect) {
     var o = {status: status};
-    if (status === "error") {
+    if (status === 'error') {
         o.code = errcode;
         switch (errcode) {
-            case "load":
+            case 'load':
                 break;
-            case "contentType":
+            case 'contentType':
                 o.message = message;
                 break;
-            case "requestTimeout":
+            case 'requestTimeout':
                 break;
-            case "probe_timeout":
+            case 'probe_timeout':
                 break;
         }
     }
-    if (redirect) o.redirect = redirect;
+    if (redirect) {
+        o.redirect = redirect;
+    }
     o.time = Math.floor((Date.now() - window.startTime) / 1000);
     console.log(JSON.stringify(o));
-    console.log("]")
+    console.log(']');
 }
 
 
 function execTimedOut() {
     if (!response || response.headers.length === 0) {
-        printStatus("error", "requestTimeout");
+        printStatus('error', 'requestTimeout');
         phantom.exit(0);
     }
-    printStatus("error", "probe_timeout");
+    printStatus('error', 'probe_timeout');
     phantom.exit(0);
 
 }
@@ -95,14 +243,14 @@ function execTimedOut() {
 // generates PSEUDO random values. the same seed will generate the same values
 function generateRandomValues(seed) {
     var values = {};
-    var letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    var numbers = "0123456789";
-    var symbols = "!#&^;.,?%$*";
-    var months = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
-    var years = ["1982", "1989", "1990", "1994", "1995", "1996"];
-    var names = ["james", "john", "robert", "michael", "william", "david", "richard", "charles", "joseph", "thomas", "christopher", "daniel", "paul", "mark", "donald", "george", "kenneth"];
-    var surnames = ["anderson", "thomas", "jackson", "white", "harris", "martin", "thompson", "garcia", "martinez", "robinson", "clark", "rodriguez", "lewis", "lee", "walker", "hall"];
-    var domains = [".com", ".org", ".net", ".it", ".tv", ".de", ".fr"];
+    var letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    var numbers = '0123456789';
+    var symbols = '!#&^;.,?%$*';
+    var months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+    var years = ['1982', '1989', '1990', '1994', '1995', '1996'];
+    var names = ['james', 'john', 'robert', 'michael', 'william', 'david', 'richard', 'charles', 'joseph', 'thomas', 'christopher', 'daniel', 'paul', 'mark', 'donald', 'george', 'kenneth'];
+    var surnames = ['anderson', 'thomas', 'jackson', 'white', 'harris', 'martin', 'thompson', 'garcia', 'martinez', 'robinson', 'clark', 'rodriguez', 'lewis', 'lee', 'walker', 'hall'];
+    var domains = ['.com', '.org', '.net', '.it', '.tv', '.de', '.fr'];
 
     var randoms = [];
     var randoms_i = 0;
@@ -120,7 +268,7 @@ function generateRandomValues(seed) {
 
     var randarr = function (arr, len) {
         var r;
-        var ret = "";
+        var ret = '';
         for (var a = 0; a < len; a++) {
             r = rand(arr.length - 1);
             ret += arr[r];
@@ -142,31 +290,32 @@ function generateRandomValues(seed) {
             return randarr(years, 1);
         },
         date: function () {
-            return generators.year() + "-" + generators.month() + "-" + generators.month();
+            return generators.year() + '-' + generators.month() + '-' + generators.month();
         },
         color: function () {
-            return "#" + randarr(numbers, 6);
+            return '#' + randarr(numbers, 6);
         },
         week: function () {
-            return generators.year() + "-W" + randarr(months.slice(0, 6), 1);
+            return generators.year() + '-W' + randarr(months.slice(0, 6), 1);
         },
         time: function () {
-            return generators.month() + ":" + generators.month();
+            return generators.month() + ':' + generators.month();
         },
         datetimeLocal: function () {
-            return generators.date() + "T" + generators.time();
+            return generators.date() + 'T' + generators.time();
         },
         domain: function () {
-            return randarr(letters, 12).toLowerCase() + randarr(domains, 1);
+            return randarr(letters, 12)
+                .toLowerCase() + randarr(domains, 1);
         },
         email: function () {
-            return randarr(names, 1) + "." + generators.surname() + "@" + generators.domain();
+            return randarr(names, 1) + '.' + generators.surname() + '@' + generators.domain();
         },
         url: function () {
-            return "http://www." + generators.domain();
+            return 'http://www.' + generators.domain();
         },
         humandate: function () {
-            return generators.month() + "/" + generators.month() + "/" + generators.year();
+            return generators.month() + '/' + generators.month() + '/' + generators.year();
         },
         password: function () {
             return randarr(letters, 3) + randarr(symbols, 1) + randarr(letters, 2) + randarr(numbers, 3) + randarr(symbols, 2);
@@ -178,8 +327,8 @@ function generateRandomValues(seed) {
             return randarr(names, 1);
         },
         tel: function () {
-            return "+" + randarr(numbers, 1) + " " + randarr(numbers, 10)
-        }
+            return '+' + randarr(numbers, 1) + ' ' + randarr(numbers, 10);
+        },
     };
 
     for (var type in generators) {
@@ -212,7 +361,7 @@ function startProbe(random) {
 
         Node.prototype.__originalAddEventListener = Node.prototype.addEventListener;
         Node.prototype.addEventListener = function () {
-            if (arguments[0] !== "DOMContentLoaded") { // is this ok???
+            if (arguments[0] !== 'DOMContentLoaded') { // is this ok???
                 window.__PROBE__.addEventToMap(this, arguments[0]);
             }
             this.__originalAddEventListener.apply(this, arguments);
@@ -220,7 +369,7 @@ function startProbe(random) {
 
         window.__originalAddEventListener = window.addEventListener;
         window.addEventListener = function () {
-            if (arguments[0] !== "load") { // is this ok???
+            if (arguments[0] !== 'load') { // is this ok???
                 window.__PROBE__.addEventToMap(this, arguments[0]);
             }
             window.__originalAddEventListener.apply(this, arguments);
@@ -229,8 +378,8 @@ function startProbe(random) {
         XMLHttpRequest.prototype.__originalOpen = XMLHttpRequest.prototype.open;
         XMLHttpRequest.prototype.open = function (method, url, async, user, password) {
 
-            var _url = window.__PROBE__.removeUrlParameter(url, "_");
-            this.__request = new window.__PROBE__.Request("xhr", method, _url);
+            var _url = window.__PROBE__.removeUrlParameter(url, '_');
+            this.__request = new window.__PROBE__.Request('xhr', method, _url);
 
             // adding XHR listener
             this.addEventListener('readystatechange', function () {
@@ -253,7 +402,7 @@ function startProbe(random) {
                 window.__PROBE__.eventLoopManager.inErrorXHR(this);
             });
 
-            this.timeout = options.XHRTimeout;
+            this.timeout = constants.XHRTimeout;
 
             return this.__originalOpen(method, url, async, user, password);
         };
@@ -279,8 +428,9 @@ function startProbe(random) {
             window.__PROBE__.sentXHRs.push(requestKey);
             window.__PROBE__.addToRequestToPrint(this.__request);
 
-            if (!this.__skipped)
+            if (!this.__skipped) {
                 return this.__originalSend(data);
+            }
         };
 
         Node.prototype.__originalAppendChild = Node.prototype.appendChild;
@@ -305,7 +455,7 @@ function startProbe(random) {
             return function (url) {
                 window.__PROBE__.printWebsocket(url);
                 return WebSocket.prototype;
-            }
+            };
         })(window.WebSocket);
 
         if (options.overrideTimeoutFunctions) {
@@ -354,7 +504,7 @@ function startProbe(random) {
             characterData: false,
             subtree: true,
             characterDataOldValue: false,
-            attributeFilter: eventAttributeList
+            attributeFilter: eventAttributeList,
         });
 
     }, options);
@@ -363,8 +513,9 @@ function startProbe(random) {
 
 
 function assertContentTypeHtml(response) {
-    if (response.contentType.toLowerCase().split(";")[0] !== "text/html") {
-        printStatus("error", "contentType", "content type is " + response.contentType); // escape response.contentType???
+    if (response.contentType.toLowerCase()
+            .split(';')[0] !== 'text/html') {
+        printStatus('error', 'contentType', 'content type is ' + response.contentType); // escape response.contentType???
         phantom.exit(0);
     }
 }

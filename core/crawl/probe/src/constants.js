@@ -1,5 +1,6 @@
 (function() {
     'use strict';
+
     exports.messageEvent = {
         eventLoopReady: {
             from: 'htcap',
@@ -35,5 +36,19 @@
         'span': ['click'],
         'td': ['click'],
     };
+
+    // map input names to string generators. see generateRandomValues to see all available generators
+    exports.inputNameMatchValue = [ // regexps NEED to be string to get passed to phantom page
+        {name: 'mail', value: 'email'},
+        {name: '((number)|(phone))|(^tel)', value: 'number'},
+        {name: '(date)|(birth)', value: 'humandate'},
+        {name: '((month)|(day))|(^mon$)', value: 'month'},
+        {name: 'year', value: 'year'},
+        {name: 'url', value: 'url'},
+        {name: 'firstname', value: 'firstname'},
+        {name: '(surname)|(lastname)', value: 'surname'},
+    ];
+
+    exports.XHRTimeout = 5000;
 
 })();
