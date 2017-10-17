@@ -9,19 +9,16 @@
  */
 
 
-(function () {
-    /*
-     this function is passed to page.evaluate. doing so it is possible to avoid that the Probe object
-     is inserted into page window scope (only its instance is referred by window.__PROBE__)
-     */
-    window.initProbe = function initProbe(options, inputValues) {
+(function() {
+    'use strict';
 
+    class Probe {
         /**
          * @param options
          * @param inputValues
          * @constructor
          */
-        function Probe(options, inputValues) {
+        constructor(options, inputValues) {
             this._options = options;
 
             this.sentXHRs = [];
@@ -35,411 +32,112 @@
             this._inputValues = inputValues;
         }
 
-        /**
-         * Class Request
-         *
-         * @param {String}  type
-         * @param {String} method
-         * @param {String} url
-         * @param {Object=} data
-         * @param {PageEvent=} triggerer - the PageEvent triggered to generate the request
-         * @constructor
-         */
-        Probe.prototype.Request = function (type, method, url, data, triggerer) {
-            this.type = type;
-            this.method = method;
-            this.url = url;
-            this.data = data || null;
 
-            /** @type {PageEvent} */
-            this.triggerer = triggerer;
-
-            //this.username = null; // todo
-            //this.password = null;
-        };
-
-        Object.defineProperties(Probe.prototype.Request.prototype, {
-            /**
-             *  returns a unique string representation of the request. used for comparision.
-             */
-            key: {
-                get: function () {
-                    return JSON.stringify(this);
-                }
-            }
-        });
-
-        /**
-         * the standard toJSON for JSON.stringify() call
-         * @returns {{type: *, method: *, url: *, data: null}}
-         */
-        Probe.prototype.Request.prototype.toJSON = function () {
-            var obj = {
-                type: this.type,
-                method: this.method,
-                url: this.url,
-                data: this.data || null
-            };
-
-            if (this.triggerer) {
-                obj.trigger = {element: _elementToString(this.triggerer.element), event: this.triggerer.eventName};
-            }
-
-            return obj;
-        };
-
-        // END OF class Request..
-
-        /**
-         * Class PageEvent
-         * Element's event found in the page
-         *
-         * @param {Element} element
-         * @param {String} eventName
-         * @constructor
-         */
-        Probe.prototype.PageEvent = function (element, eventName) {
-            /**
-             * the DOM element
-             * @type {Element}
-             */
-            this.element = element;
-            /**
-             * the event name
-             * @type {String}
-             */
-            this.eventName = eventName;
-        };
-
-        /**
-         * Trigger the page event
-         */
-        Probe.prototype.PageEvent.prototype.trigger = function () {
-
-            // DEBUG:
-            // console.log('PageEvent triggering events for : ', _elementToString(this.element), this.eventName);
-
-            if ('createEvent' in document) {
-                var evt = document.createEvent('HTMLEvents');
-                evt.initEvent(this.eventName, true, false);
-                this.element.dispatchEvent(evt);
-            } else {
-                var eventName = 'on' + this.eventName;
-                if (eventName in this.element && typeof this.element[eventName] === "function") {
-                    this.element[eventName]();
-                }
-            }
-        };
-
-        /**
-         * EventLoop Manager
-         * Responsibility:
-         * Managing the eventLoop to ensure that every code execution (from the page or from the probe)
-         * is completely done before launching anything else.
-         * Since the possible actions on the page are _user triggered_, the executed code is design to be triggered by
-         * a _normal_ interaction through standard HID, not automated. So it is important to give time
-         * to the JS stack to empty before launching anything new.
-         *
-         * Possible actions to be schedule are: DOM Assessment and event triggering.
-         *
-         * Upon schedule, the action will take place as soon as the eventLoop is empty and nothing is waiting
-         * to be completed (like an XHR request).
-         *
-         * The logic is (in this order):
-         * if a XHR has been sent or is done, do nothing (ie. wait the next event loop before acting)
-         * then if a DOM Assessment is waiting, do it first.
-         * then if a event is waiting to be triggered, trigger it.
-         *
-         * A new DOM Assessment is schedule every time the DOM is modified.
-         * A new event is schedule for every triggerable event on every element in the DOM.
-         *
-         *
-         * more info on {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/EventLoop MDN}
-         *
-         * @param probe the probe from where it's initialized
-         * @constructor
-         */
-        Probe.prototype.EventLoopManager = function (probe) {
-            this._probe = probe;
-            this._DOMAssessmentQueue = [];
-            this._toBeTriggeredEventsQueue = [];
-            this._sentXHRQueue = [];
-            this._doneXHRQueue = [];
-            this._emptyLoopCounter = 0;
-        };
-
-        /**
-         * callback for the eventMessage listener
-         * it will wait until x empty eventLoop before requesting a `doNextAction()`,
-         * x being the buffer size set in constants.js
-         *
-         * @param eventMessage - the eventMessage triggered
-         * @private
-         */
-        Probe.prototype.EventLoopManager.prototype.eventMessageHandler = function (eventMessage) {
-
-            // if it's our eventMessage
-            if (eventMessage.source === window && eventMessage.data.from === 'htcap') {
-                eventMessage.stopPropagation();
-
-                if (eventMessage.data.name === __HTCAP.messageEvent.eventLoopReady.name) {
-
-                    // waiting x number eventLoop before doing anything (x being the buffer size)
-                    if (this._emptyLoopCounter < __HTCAP.eventLoop.bufferCycleSize) {
-                        window.postMessage(__HTCAP.messageEvent.eventLoopReady, "*");
-                        this._emptyLoopCounter += 1;
-                    } else {
-                        this._emptyLoopCounter = 0;
-                        this.doNextAction();
-                    }
-                }
-            }
-        };
-
-        /**
-         * start the eventLoopManager
-         */
-        Probe.prototype.EventLoopManager.prototype.start = function () {
-            // DEBUG:
-            // console.log('eventLoop start');
-
-            window.postMessage(__HTCAP.messageEvent.eventLoopReady, "*");
-        };
-
-        /**
-         * Do the next action based on the priority:
-         * if a XHR has been sent or is done, do nothing (ie. wait the next event loop before acting)
-         * then if a DOM Assessment is waiting, do it first.
-         * then if a event is waiting to be triggered, trigger it.
-         * then close the manager
-         */
-        Probe.prototype.EventLoopManager.prototype.doNextAction = function () {
-
-            // DEBUG:
-            if (this._sentXHRQueue.length <= 0) {            // avoiding noise
-                console.log('eventLoop doNextAction - done:', this._doneXHRQueue.length,
-                    ', DOM:', this._DOMAssessmentQueue.length,
-                    ', event:', this._toBeTriggeredEventsQueue.length
-                );
-            }
-
-            if (this._sentXHRQueue.length > 0) { // if there is XHR waiting to be resolved
-                // releasing the eventLoop waiting for resolution
-                window.postMessage(__HTCAP.messageEvent.eventLoopReady, "*");
-
-            } else if (this._doneXHRQueue.length > 0) { // if there is XHR done
-                this._doneXHRQueue.shift();
-
-                window.__originalSetTimeout(function () {
-                    window.postMessage(__HTCAP.messageEvent.eventLoopReady, "*");
-                }, __HTCAP.eventLoop.afterDoneXHRTimeout);
-
-            } else if (this._DOMAssessmentQueue.length > 0) { // if there is DOMAssessment waiting
-
-                var element = this._DOMAssessmentQueue.shift();
-                // DEBUG:
-                // console.log('eventLoop analyzeDOM: ' + _elementToString(element));
-
-                // starting analyze on the next element
-                this._probe._analyzeDOMElement(element);
-                window.postMessage(__HTCAP.messageEvent.eventLoopReady, "*");
-
-            } else if (this._toBeTriggeredEventsQueue.length > 0) { // if there is event waiting
-                // retrieving the next pageEvent
-                var pageEvent = this._toBeTriggeredEventsQueue.pop();
-
-                // setting the current element
-                this._probe._currentPageEvent = pageEvent;
-
-                // DEBUG:
-                // console.log('eventLoop pageEvent.trigger', pageEvent.element.tagName, pageEvent.eventName);
-
-                // Triggering the event
-                pageEvent.trigger();
-
-                window.__originalSetTimeout(function () {
-                    window.postMessage(__HTCAP.messageEvent.eventLoopReady, "*");
-                }, __HTCAP.eventLoop.afterEventTriggeredTimeout);
-            } else {
-                // DEBUG:
-                // console.log("eventLoop END");
-                window.__callPhantom({cmd: 'end'})
-            }
-        };
-
-        Probe.prototype.EventLoopManager.prototype.scheduleDOMAssessment = function (element) {
-            if (this._DOMAssessmentQueue.indexOf(element) < 0) {
-                this._DOMAssessmentQueue.push(element);
-            }
-        };
-
-        Probe.prototype.EventLoopManager.prototype.nodeMutated = function (mutations) {
-            // DEBUG:
-            // console.log('eventLoop nodesMutated:', mutations.length);
-            mutations.forEach(function (mutationRecord) {
-                if (mutationRecord.type === 'childList') {
-                    for (var i = 0; i < mutationRecord.addedNodes.length; i++) {
-                        var addedNode = mutationRecord.addedNodes[i];
-                        // DEBUG:
-                        // console.log('added:', _elementToString(mutationRecord.addedNodes[i]), mutationRecord.addedNodes[i]);
-
-                        // see: https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeType#Constants
-                        if (addedNode.nodeType === Node.ELEMENT_NODE) {
-                            // DEBUG:
-                            // console.log('added:', addedNode);
-                            this.scheduleDOMAssessment(addedNode)
-                        }
-                    }
-                } else if (mutationRecord.type === 'attributes') {
-                    var element = mutationRecord.target;
-                    // DEBUG:
-                    // console.log('eventLoop nodeMutated: attributes', _elementToString(element), mutationRecord.attributeName);
-                    this._probe._triggeredPageEvents.forEach(function (pageEvent, index) {
-                        if (pageEvent.element === element) {
-                            this._probe._triggeredPageEvents.splice(index, 1);
-                        }
-                    }.bind(this));
-                    this.scheduleDOMAssessment(element);
-
-                }
-            }.bind(this));
-        };
-
-        Probe.prototype.EventLoopManager.prototype.scheduleEventTriggering = function (pageEvent) {
-            if (this._toBeTriggeredEventsQueue.indexOf(pageEvent) < 0) {
-                // DEBUG:
-                // console.log('eventLoop scheduleEventTriggering');
-                this._toBeTriggeredEventsQueue.push(pageEvent);
-            }
-        };
-
-        Probe.prototype.EventLoopManager.prototype.sentXHR = function (request) {
-            if (this._sentXHRQueue.indexOf(request) < 0) {
-                // DEBUG:
-                // console.log('eventLoop sentXHR');
-                this._sentXHRQueue.push(request);
-            }
-        };
-
-        Probe.prototype.EventLoopManager.prototype.doneXHR = function (request) {
-            if (this._doneXHRQueue.indexOf(request) < 0) {
-                // DEBUG:
-                // console.log('eventLoop doneXHR');
-
-                // if the request is in the sentXHR queue
-                var i = this._sentXHRQueue.indexOf(request);
-                if (i >= 0) {
-                    this._sentXHRQueue.splice(i, 1);
-                }
-
-                this._doneXHRQueue.push(request);
-            }
-        };
-
-        Probe.prototype.EventLoopManager.prototype.inErrorXHR = function (request) {
-            // DEBUG:
-            // console.log('eventLoop inErrorXHR');
-        };
+        // /**
 
 
-        Probe.prototype.addToRequestToPrint = function (request) {
+        addToRequestToPrint(request) {
             var requestKey = request.key;
             if (this.requestToPrint.indexOf(requestKey) < 0) {
                 this.requestToPrint.push(requestKey);
             }
-        };
+        }
 
-        Probe.prototype.printRequests = function () {
-            this.requestToPrint.forEach(function (request) {
-                _print('["request",' + request + "],");
+        printRequests() {
+            this.requestToPrint.forEach(function(request) {
+                _print('["request",' + request + '],');
             });
-        };
+        }
 
-        Probe.prototype.printJSONP = function (node) {
+        printJSONP(node) {
 
-            if (node.nodeName.toLowerCase() === "script" && node.hasAttribute("src")) {
-                var a = document.createElement("a"),
-                    src = node.getAttribute("src");
+            if (node.nodeName.toLowerCase() === 'script' && node.hasAttribute('src')) {
+                var a = document.createElement('a'),
+                    src = node.getAttribute('src');
 
                 a.href = src;
 
                 // JSONP must have a querystring...
                 if (a.search) {
-                    var req = new this.Request("jsonp", "GET", src, null, this.getLastTriggerPageEvent());
+                    var req = new this.Request('jsonp', 'GET', src, null, this.getLastTriggerPageEvent());
                     this.addToRequestToPrint(req);
                 }
             }
-        };
+        }
 
-        Probe.prototype.printLink = function (url) {
+        printLink(url) {
             var req;
 
-            url = url.split("#")[0];
+            url = url.split('#')[0];
 
             if (!(url.match(/^[a-z0-9\-_]+:/i) && !url.match(/(^https?)|(^ftps?):/i))) {
-                req = new this.Request("link", "GET", url, undefined, this.getLastTriggerPageEvent());
+                req = new this.Request('link', 'GET', url, undefined, this.getLastTriggerPageEvent());
             }
 
             if (req) {
                 this.addToRequestToPrint(req);
             }
-        };
+        }
 
-        Probe.prototype.printWebsocket = function (url) {
-            var req = new this.Request("websocket", "GET", url, null, this.getLastTriggerPageEvent());
+        printWebsocket(url) {
+            var req = new this.Request('websocket', 'GET', url, null, this.getLastTriggerPageEvent());
             this.addToRequestToPrint(req);
-        };
+        }
 
-        Probe.prototype.getRandomValue = function (type) {
-            if (!(type in this._inputValues))
-                type = "string";
+        getRandomValue(type) {
+            if (!(type in this._inputValues)) {
+                type = 'string';
+            }
 
             return this._inputValues[type];
-        };
+        }
 
         /**
          * return the last element/event name pair triggered
          * @returns {PageEvent}
          */
-        Probe.prototype.getLastTriggerPageEvent = function () {
+        getLastTriggerPageEvent() {
             return this._currentPageEvent;
-        };
+        }
 
         /**
          * get request from the given FORM element
          * @param {Element} form
          * @returns {Probe.Request}
          */
-        Probe.prototype.getFormAsRequest = function (form) {
+        getFormAsRequest(form) {
             var par, req,
                 formObj = {};
 
-            formObj.method = form.getAttribute("method");
+            formObj.method = form.getAttribute('method');
             if (!formObj.method) {
-                formObj.method = "GET";
+                formObj.method = 'GET';
             } else {
                 formObj.method = formObj.method.toUpperCase();
             }
 
-            formObj.url = form.getAttribute("action");
+            formObj.url = form.getAttribute('action');
             if (!formObj.url) {
                 formObj.url = document.location.href;
             }
             formObj.data = [];
-            var inputs = form.querySelectorAll("input, select, textarea");
+            var inputs = form.querySelectorAll('input, select, textarea');
             for (var a = 0; a < inputs.length; a++) {
-                if (!inputs[a].name) continue;
-                par = encodeURIComponent(inputs[a].name) + "=" + encodeURIComponent(inputs[a].value);
-                if (inputs[a].tagName === "INPUT" && inputs[a].type !== null) {
+                if (!inputs[a].name) {
+                    continue;
+                }
+                par = encodeURIComponent(inputs[a].name) + '=' + encodeURIComponent(inputs[a].value);
+                if (inputs[a].tagName === 'INPUT' && inputs[a].type !== null) {
 
                     switch (inputs[a].type.toLowerCase()) {
-                        case "button":
-                        case "submit":
+                        case 'button':
+                        case 'submit':
                             break;
-                        case "checkbox":
-                        case "radio":
-                            if (inputs[a].checked)
+                        case 'checkbox':
+                        case 'radio':
+                            if (inputs[a].checked) {
                                 formObj.data.push(par);
+                            }
                             break;
                         default:
                             formObj.data.push(par);
@@ -450,24 +148,24 @@
                 }
             }
 
-            formObj.data = formObj.data.join("&");
+            formObj.data = formObj.data.join('&');
 
-            if (formObj.method === "GET") {
+            if (formObj.method === 'GET') {
                 var url = _replaceUrlQuery(formObj.url, formObj.data);
-                req = new this.Request("form", "GET", url);
+                req = new this.Request('form', 'GET', url);
             } else {
-                req = new this.Request("form", "POST", formObj.url, formObj.data);
+                req = new this.Request('form', 'POST', formObj.url, formObj.data);
             }
 
             return req;
-        };
+        }
 
         /**
          * add the given element/event pair to map
          * @param {Element} element
          * @param {String} eventName
          */
-        Probe.prototype.addEventToMap = function (element, eventName) {
+        addEventToMap(element, eventName) {
 
             for (var a = 0; a < this._eventsMap.length; a++) {
                 if (this._eventsMap[a].element === element) {
@@ -478,15 +176,15 @@
 
             this._eventsMap.push({
                 element: element,
-                events: [eventName]
+                events: [eventName],
             });
-        };
+        }
 
         /**
          * Start the analysis of the current Document
          */
-        Probe.prototype.startAnalysis = function () {
-            console.log("page initialized ");
+        startAnalysis() {
+            console.log('page initialized ');
 
             // Parsing the current DOM
             var elements = document.getElementsByTagName('*');
@@ -499,40 +197,42 @@
 
             // starting the eventLoop manager
             this.eventLoopManager.start();
-        };
+        }
 
-        Probe.prototype.removeUrlParameter = function (url, par) {
-            var anchor = document.createElement("a");
+        removeUrlParameter(url, par) {
+            var anchor = document.createElement('a');
             anchor.href = url;
 
-            var pars = anchor.search.substr(1).split(/(?:&amp;|&)+/);
+            var pars = anchor.search.substr(1)
+                .split(/(?:&amp;|&)+/);
 
             for (var a = pars.length - 1; a >= 0; a--) {
-                if (pars[a].split("=")[0] === par)
+                if (pars[a].split('=')[0] === par) {
                     pars.splice(a, 1);
+                }
             }
 
-            return anchor.protocol + "//" + anchor.host + anchor.pathname + (pars.length > 0 ? "?" + pars.join("&") : "") + anchor.hash;
-        };
+            return anchor.protocol + '//' + anchor.host + anchor.pathname + (pars.length > 0 ? '?' + pars.join('&') : '') + anchor.hash;
+        }
 
-        Probe.prototype.getAbsoluteUrl = function (url) {
+        getAbsoluteUrl(url) {
             var anchor = document.createElement('a');
             anchor.href = url;
             return anchor.href;
-        };
+        }
 
         /**
          * returns true if the value has been set
          * @param {Element} el
          * @private
          */
-        Probe.prototype._setVal = function (el) {
+        _setVal(el) {
             var _this = this;
 
-            var setv = function (name) {
+            var setv = function(name) {
                 var ret = _this.getRandomValue('string');
-                _this._options.inputNameMatchValue.forEach(function (matchValue) {
-                    var regexp = new RegExp(matchValue.name, "gi");
+                __PROBE_CONSTANTS__.inputNameMatchValue.forEach(function(matchValue) {
+                    var regexp = new RegExp(matchValue.name, 'gi');
                     if (name.match(regexp)) {
                         ret = _this.getRandomValue(matchValue.value);
                     }
@@ -541,7 +241,7 @@
             };
 
             // needed for example by angularjs
-            var triggerChange = function () {
+            var triggerChange = function() {
                 // update angular model
                 _this._trigger(new _this.PageEvent(el, 'input'));
 
@@ -610,7 +310,7 @@
 
                 triggerChange();
             }
-        };
+        }
 
         /**
          * schedule the trigger of the given event on the given element when the eventLoop is ready
@@ -618,25 +318,25 @@
          * @param {PageEvent} pageEvent which have to be triggered
          * @private
          */
-        Probe.prototype._trigger = function (pageEvent) {
+        _trigger(pageEvent) {
             // workaround for a phantomjs bug on linux (so maybe not a phantom bug but some linux libs??).
             // if you trigger click on input type=color everything freezes... maybe due to some
             // color picker that pops up ...
-            if (!(pageEvent.element.tagName.toUpperCase() === "INPUT" && pageEvent.element.type.toLowerCase() === 'color' && pageEvent.eventName.toLowerCase() === 'click')) {
+            if (!(pageEvent.element.tagName.toUpperCase() === 'INPUT' && pageEvent.element.type.toLowerCase() === 'color' && pageEvent.eventName.toLowerCase() === 'click')) {
 
                 // trigger the given event only when there is some space in the event stack to avoid collision
                 // and give time to things to resolve properly (since we trigger user driven event,
                 // it is important to give time to the analysed page to breath between calls)
                 this.eventLoopManager.scheduleEventTriggering(pageEvent);
             }
-        };
+        }
 
         /**
          * @param  {Element} element
          * @returns {Array}
          * @private
          */
-        Probe.prototype._getEventsForElement = function (element) {
+        _getEventsForElement(element) {
             var events = [];
 
             var map = this._eventsMap;
@@ -647,24 +347,24 @@
                 }
             }
 
-            for (var selector in __HTCAP.triggerableEvents) {
+            for (var selector in __PROBE_CONSTANTS__.triggerableEvents) {
                 if (element.webkitMatchesSelector(selector)) {
-                    events = events.concat(__HTCAP.triggerableEvents[selector]);
+                    events = events.concat(__PROBE_CONSTANTS__.triggerableEvents[selector]);
                 }
             }
 
             return events;
-        };
+        }
 
         /**
          * Request trigger all event for a given element
          * @param {Element} element
          * @private
          */
-        Probe.prototype._triggerElementEvents = function (element) {
+        _triggerElementEvents(element) {
             var events = this._getEventsForElement(element);
 
-            events.forEach(function (eventName) {
+            events.forEach(function(eventName) {
                 var pageEvent = new this.PageEvent(element, eventName);
                 // DEBUG:
                 // console.log("triggering events for : " + _elementToString(element) + " " + eventName);
@@ -674,50 +374,50 @@
                     this._trigger(pageEvent);
                 }
             }.bind(this));
-        };
+        }
 
         /**
          * @param {Element} element
          * @private
          */
-        Probe.prototype._mapElementEvents = function (element) {
-            __HTCAP.mappableEvents.forEach(function (eventName) {
-                var onEventName = "on" + eventName;
+        _mapElementEvents(element) {
+            __PROBE_CONSTANTS__.mappableEvents.forEach(function(eventName) {
+                var onEventName = 'on' + eventName;
 
                 if (onEventName in element && element[onEventName]) {
                     this.addEventToMap(element, eventName);
                 }
-            }.bind(this))
-        };
+            }.bind(this));
+        }
 
         /**
          * print request from <form> html tag
          * @param {Element} element
          * @private
          */
-        Probe.prototype._printRequestFromForm = function (element) {
-            if (element.tagName.toLowerCase() === "form") {
+        _printRequestFromForm(element) {
+            if (element.tagName.toLowerCase() === 'form') {
                 this.addToRequestToPrint(this.getFormAsRequest(element));
             }
-        };
+        }
 
         /**
          * print request from <a> html tag
          * @param {Element} element
          * @private
          */
-        Probe.prototype._printRequestFromATag = function (element) {
-            if (element.tagName.toLowerCase() === "a" && element.hasAttribute("href")) {
+        _printRequestFromATag(element) {
+            if (element.tagName.toLowerCase() === 'a' && element.hasAttribute('href')) {
                 this.printLink(element.href);
             }
-        };
+        }
 
         /**
          * analyze the given element
          * @param {Element} element - the element to analyze
          * @private
          */
-        Probe.prototype._analyzeDOMElement = function (element) {
+        _analyzeDOMElement(element) {
 
             // map property events and fill input values
             this._mapElementEvents(element);
@@ -736,102 +436,410 @@
             if (this._options.triggerEvents) {
                 this._triggerElementEvents(element);
             }
+        }
+    }
+
+    /**
+     * Class Request
+     *
+     * @param {String}  type
+     * @param {String} method
+     * @param {String} url
+     * @param {Object=} data
+     * @param {PageEvent=} triggerer - the PageEvent triggered to generate the request
+     * @constructor
+     */
+    Probe.prototype.Request = function(type, method, url, data, triggerer) {
+        this.type = type;
+        this.method = method;
+        this.url = url;
+        this.data = data || null;
+
+        /** @type {PageEvent} */
+        this.triggerer = triggerer;
+
+        //this.username = null; // todo
+        //this.password = null;
+    };
+
+    Object.defineProperties(Probe.prototype.Request.prototype, {
+        /**
+         *  returns a unique string representation of the request. used for comparision.
+         */
+        key: {
+            get: function() {
+                return JSON.stringify(this);
+            },
+        },
+    });
+
+    /**
+     * the standard toJSON for JSON.stringify() call
+     * @returns {{type: *, method: *, url: *, data: null}}
+     */
+    Probe.prototype.Request.prototype.toJSON = function() {
+        var obj = {
+            type: this.type,
+            method: this.method,
+            url: this.url,
+            data: this.data || null,
         };
 
-        function _print(str) {
-            window.__callPhantom({cmd: 'print', argument: str});
+        if (this.triggerer) {
+            obj.trigger = {element: _elementToString(this.triggerer.element), event: this.triggerer.eventName};
         }
 
-        /**
-         * convert an element to a string
-         * @param {Element=} element - element to convert
-         * @returns {string}
-         * @private
-         * @static
-         */
-        function _elementToString(element) {
-            if (!element) {
-                return "[]";
-            }
-            var tagName = (element === document ? "DOCUMENT" : (element === window ? "WINDOW" : element.tagName));
-            var text = undefined;
-            if (element.textContent) {
-                text = element.textContent.trim().replace(/\s/, " ").substring(0, 10);
-                if (text.indexOf(" ") > -1) text = "'" + text + "'";
-            }
+        return obj;
+    };
+    //
+    // // END OF class Request..
+    //
+    // /**
+    //  * Class PageEvent
+    //  * Element's event found in the page
+    //  *
+    //  * @param {Element} element
+    //  * @param {String} eventName
+    //  * @constructor
+    //  */
+    // Probe.prototype.PageEvent = function(element, eventName) {
+    //     /**
+    //      * the DOM element
+    //      * @type {Element}
+    //      */
+    //     this.element = element;
+    //     /**
+    //      * the event name
+    //      * @type {String}
+    //      */
+    //     this.eventName = eventName;
+    // };
+    //
+    // /**
+    //  * Trigger the page event
+    //  */
+    // Probe.prototype.PageEvent.prototype.trigger = function() {
+    //
+    //     // DEBUG:
+    //     // console.log('PageEvent triggering events for : ', _elementToString(this.element), this.eventName);
+    //
+    //     if ('createEvent' in document) {
+    //         var evt = document.createEvent('HTMLEvents');
+    //         evt.initEvent(this.eventName, true, false);
+    //         this.element.dispatchEvent(evt);
+    //     } else {
+    //         var eventName = 'on' + this.eventName;
+    //         if (eventName in this.element && typeof this.element[eventName] === 'function') {
+    //             this.element[eventName]();
+    //         }
+    //     }
+    // };
+    //
+    // /**
+    //  * EventLoop Manager
+    //  * Responsibility:
+    //  * Managing the eventLoop to ensure that every code execution (from the page or from the probe)
+    //  * is completely done before launching anything else.
+    //  * Since the possible actions on the page are _user triggered_, the executed code is design to be triggered by
+    //  * a _normal_ interaction through standard HID, not automated. So it is important to give time
+    //  * to the JS stack to empty before launching anything new.
+    //  *
+    //  * Possible actions to be schedule are: DOM Assessment and event triggering.
+    //  *
+    //  * Upon schedule, the action will take place as soon as the eventLoop is empty and nothing is waiting
+    //  * to be completed (like an XHR request).
+    //  *
+    //  * The logic is (in this order):
+    //  * if a XHR has been sent or is done, do nothing (ie. wait the next event loop before acting)
+    //  * then if a DOM Assessment is waiting, do it first.
+    //  * then if a event is waiting to be triggered, trigger it.
+    //  *
+    //  * A new DOM Assessment is schedule every time the DOM is modified.
+    //  * A new event is schedule for every triggerable event on every element in the DOM.
+    //  *
+    //  *
+    //  * more info on {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/EventLoop MDN}
+    //  *
+    //  * @param probe the probe from where it's initialized
+    //  * @constructor
+    //  */
+    // Probe.prototype.EventLoopManager = function(probe) {
+    //     this._probe = probe;
+    //     this._DOMAssessmentQueue = [];
+    //     this._toBeTriggeredEventsQueue = [];
+    //     this._sentXHRQueue = [];
+    //     this._doneXHRQueue = [];
+    //     this._emptyLoopCounter = 0;
+    // };
+    //
+    // /**
+    //  * callback for the eventMessage listener
+    //  * it will wait until x empty eventLoop before requesting a `doNextAction()`,
+    //  * x being the buffer size set in constants.js
+    //  *
+    //  * @param eventMessage - the eventMessage triggered
+    //  * @private
+    //  */
+    // Probe.prototype.EventLoopManager.prototype.eventMessageHandler = function(eventMessage) {
+    //
+    //     // if it's our eventMessage
+    //     if (eventMessage.source === window && eventMessage.data.from === 'htcap') {
+    //         eventMessage.stopPropagation();
+    //
+    //         if (eventMessage.data.name === __PROBE_CONSTANTS__.messageEvent.eventLoopReady.name) {
+    //
+    //             // waiting x number eventLoop before doing anything (x being the buffer size)
+    //             if (this._emptyLoopCounter < __PROBE_CONSTANTS__.eventLoop.bufferCycleSize) {
+    //                 window.postMessage(__PROBE_CONSTANTS__.messageEvent.eventLoopReady, '*');
+    //                 this._emptyLoopCounter += 1;
+    //             } else {
+    //                 this._emptyLoopCounter = 0;
+    //                 this.doNextAction();
+    //             }
+    //         }
+    //     }
+    // };
+    //
+    // /**
+    //  * start the eventLoopManager
+    //  */
+    // Probe.prototype.EventLoopManager.prototype.start = function() {
+    //     // DEBUG:
+    //     // console.log('eventLoop start');
+    //
+    //     window.postMessage(__PROBE_CONSTANTS__.messageEvent.eventLoopReady, '*');
+    // };
+    //
+    // /**
+    //  * Do the next action based on the priority:
+    //  * if a XHR has been sent or is done, do nothing (ie. wait the next event loop before acting)
+    //  * then if a DOM Assessment is waiting, do it first.
+    //  * then if a event is waiting to be triggered, trigger it.
+    //  * then close the manager
+    //  */
+    // Probe.prototype.EventLoopManager.prototype.doNextAction = function() {
+    //
+    //     // DEBUG:
+    //     if (this._sentXHRQueue.length <= 0) {            // avoiding noise
+    //         console.log('eventLoop doNextAction - done:', this._doneXHRQueue.length,
+    //             ', DOM:', this._DOMAssessmentQueue.length,
+    //             ', event:', this._toBeTriggeredEventsQueue.length);
+    //     }
+    //
+    //     if (this._sentXHRQueue.length > 0) { // if there is XHR waiting to be resolved
+    //         // releasing the eventLoop waiting for resolution
+    //         window.postMessage(__PROBE_CONSTANTS__.messageEvent.eventLoopReady, '*');
+    //
+    //     } else if (this._doneXHRQueue.length > 0) { // if there is XHR done
+    //         this._doneXHRQueue.shift();
+    //
+    //         window.__originalSetTimeout(function() {
+    //             window.postMessage(__PROBE_CONSTANTS__.messageEvent.eventLoopReady, '*');
+    //         }, __PROBE_CONSTANTS__.eventLoop.afterDoneXHRTimeout);
+    //
+    //     } else if (this._DOMAssessmentQueue.length > 0) { // if there is DOMAssessment waiting
+    //
+    //         var element = this._DOMAssessmentQueue.shift();
+    //         // DEBUG:
+    //         // console.log('eventLoop analyzeDOM: ' + _elementToString(element));
+    //
+    //         // starting analyze on the next element
+    //         this._probe._analyzeDOMElement(element);
+    //         window.postMessage(__PROBE_CONSTANTS__.messageEvent.eventLoopReady, '*');
+    //
+    //     } else if (this._toBeTriggeredEventsQueue.length > 0) { // if there is event waiting
+    //         // retrieving the next pageEvent
+    //         var pageEvent = this._toBeTriggeredEventsQueue.pop();
+    //
+    //         // setting the current element
+    //         this._probe._currentPageEvent = pageEvent;
+    //
+    //         // DEBUG:
+    //         // console.log('eventLoop pageEvent.trigger', pageEvent.element.tagName, pageEvent.eventName);
+    //
+    //         // Triggering the event
+    //         pageEvent.trigger();
+    //
+    //         window.__originalSetTimeout(function() {
+    //             window.postMessage(__PROBE_CONSTANTS__.messageEvent.eventLoopReady, '*');
+    //         }, __PROBE_CONSTANTS__.eventLoop.afterEventTriggeredTimeout);
+    //     } else {
+    //         // DEBUG:
+    //         // console.log("eventLoop END");
+    //         window.__callPhantom({cmd: 'end'});
+    //     }
+    // };
+    //
+    // Probe.prototype.EventLoopManager.prototype.scheduleDOMAssessment = function(element) {
+    //     if (this._DOMAssessmentQueue.indexOf(element) < 0) {
+    //         this._DOMAssessmentQueue.push(element);
+    //     }
+    // };
+    //
+    // Probe.prototype.EventLoopManager.prototype.nodeMutated = function(mutations) {
+    //     // DEBUG:
+    //     // console.log('eventLoop nodesMutated:', mutations.length);
+    //     mutations.forEach(function(mutationRecord) {
+    //         if (mutationRecord.type === 'childList') {
+    //             for (var i = 0; i < mutationRecord.addedNodes.length; i++) {
+    //                 var addedNode = mutationRecord.addedNodes[i];
+    //                 // DEBUG:
+    //                 // console.log('added:', _elementToString(mutationRecord.addedNodes[i]), mutationRecord.addedNodes[i]);
+    //
+    //                 // see: https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeType#Constants
+    //                 if (addedNode.nodeType === Node.ELEMENT_NODE) {
+    //                     // DEBUG:
+    //                     // console.log('added:', addedNode);
+    //                     this.scheduleDOMAssessment(addedNode);
+    //                 }
+    //             }
+    //         } else if (mutationRecord.type === 'attributes') {
+    //             var element = mutationRecord.target;
+    //             // DEBUG:
+    //             // console.log('eventLoop nodeMutated: attributes', _elementToString(element), mutationRecord.attributeName);
+    //             this._probe._triggeredPageEvents.forEach(function(pageEvent, index) {
+    //                 if (pageEvent.element === element) {
+    //                     this._probe._triggeredPageEvents.splice(index, 1);
+    //                 }
+    //             }.bind(this));
+    //             this.scheduleDOMAssessment(element);
+    //
+    //         }
+    //     }.bind(this));
+    // };
+    //
+    // Probe.prototype.EventLoopManager.prototype.scheduleEventTriggering = function(pageEvent) {
+    //     if (this._toBeTriggeredEventsQueue.indexOf(pageEvent) < 0) {
+    //         // DEBUG:
+    //         // console.log('eventLoop scheduleEventTriggering');
+    //         this._toBeTriggeredEventsQueue.push(pageEvent);
+    //     }
+    // };
+    //
+    // Probe.prototype.EventLoopManager.prototype.sentXHR = function(request) {
+    //     if (this._sentXHRQueue.indexOf(request) < 0) {
+    //         // DEBUG:
+    //         // console.log('eventLoop sentXHR');
+    //         this._sentXHRQueue.push(request);
+    //     }
+    // };
+    //
+    // Probe.prototype.EventLoopManager.prototype.doneXHR = function(request) {
+    //     if (this._doneXHRQueue.indexOf(request) < 0) {
+    //         // DEBUG:
+    //         // console.log('eventLoop doneXHR');
+    //
+    //         // if the request is in the sentXHR queue
+    //         var i = this._sentXHRQueue.indexOf(request);
+    //         if (i >= 0) {
+    //             this._sentXHRQueue.splice(i, 1);
+    //         }
+    //
+    //         this._doneXHRQueue.push(request);
+    //     }
+    // };
+    //
+    // Probe.prototype.EventLoopManager.prototype.inErrorXHR = function(request) {
+    //     // DEBUG:
+    //     // console.log('eventLoop inErrorXHR');
+    // };
 
-            var className = element.className ? (element.className.indexOf(" ") !== -1 ? "'" + element.className + "'" : element.className) : "";
+    function _print(str) {
+        window.__callPhantom({cmd: 'print', argument: str});
+    }
 
-            return "[" +
-                (tagName ? tagName + " " : "") +
-                (element.name && typeof element.name === 'string' ? element.name + " " : "") +
-                (className ? "." + className + " " : "") +
-                (element.id ? "#" + element.id + " " : "") +
-                (element.src ? "src=" + element.src + " " : "") +
-                (element.action ? "action=" + element.action + " " : "") +
-                (element.method ? "method=" + element.method + " " : "") +
-                (element.value ? "v=" + element.value + " " : "") +
-                (text ? "txt=" + text : "") +
-                "]";
+    /**
+     * convert an element to a string
+     * @param {Element=} element - element to convert
+     * @returns {string}
+     * @private
+     * @static
+     */
+    function _elementToString(element) {
+        if (!element) {
+            return '[]';
+        }
+        var tagName = (element === document ? 'DOCUMENT' : (element === window ? 'WINDOW' : element.tagName));
+        var text = undefined;
+        if (element.textContent) {
+            text = element.textContent.trim()
+                .replace(/\s/, ' ')
+                .substring(0, 10);
+            if (text.indexOf(' ') > -1) {
+                text = '\'' + text + '\'';
+            }
         }
 
-        /**
-         * @param eventName
-         * @returns {boolean}
-         * @private
-         * @static
-         */
-        function _isEventTriggerable(eventName) {
-            return ['load', 'unload', 'beforeunload'].indexOf(eventName) === -1;
-        }
+        var className = element.className ? (element.className.indexOf(' ') !== -1 ? '\'' + element.className + '\'' : element.className) : '';
 
-        /**
-         *
-         * @param arr
-         * @param el
-         * @param ignoreProperties
-         * @returns {boolean}
-         * @private
-         * @static
-         */
-        function _objectInArray(arr, el, ignoreProperties) {
-            ignoreProperties = ignoreProperties || [];
-            if (arr.length === 0) return false;
-            if (typeof arr[0] !== 'object')
-                return arr.indexOf(el) > -1;
-            for (var a = 0; a < arr.length; a++) {
-                var found = true;
-                for (var k in arr[a]) {
-                    if (arr[a][k] !== el[k] && ignoreProperties.indexOf(k) === -1) {
-                        found = false;
-                    }
-                }
-                if (found) return true;
-            }
+        return '[' +
+            (tagName ? tagName + ' ' : '') +
+            (element.name && typeof element.name === 'string' ? element.name + ' ' : '') +
+            (className ? '.' + className + ' ' : '') +
+            (element.id ? '#' + element.id + ' ' : '') +
+            (element.src ? 'src=' + element.src + ' ' : '') +
+            (element.action ? 'action=' + element.action + ' ' : '') +
+            (element.method ? 'method=' + element.method + ' ' : '') +
+            (element.value ? 'v=' + element.value + ' ' : '') +
+            (text ? 'txt=' + text : '') +
+            ']';
+    }
+
+    /**
+     * @param eventName
+     * @returns {boolean}
+     * @private
+     * @static
+     */
+    function _isEventTriggerable(eventName) {
+        return ['load', 'unload', 'beforeunload'].indexOf(eventName) === -1;
+    }
+
+    /**
+     *
+     * @param arr
+     * @param el
+     * @param ignoreProperties
+     * @returns {boolean}
+     * @private
+     * @static
+     */
+    function _objectInArray(arr, el, ignoreProperties) {
+        ignoreProperties = ignoreProperties || [];
+        if (arr.length === 0) {
             return false;
         }
-
-        function _replaceUrlQuery(url, qs) {
-            var anchor = document.createElement("a");
-            anchor.href = url;
-            /*
-             Example of content:
-             anchor.protocol; // => "http:"
-             anchor.host;     // => "example.com:3000"
-             anchor.hostname; // => "example.com"
-             anchor.port;     // => "3000"
-             anchor.pathname; // => "/pathname/"
-             anchor.hash;     // => "#hash"
-             anchor.search;   // => "?search=test"
-             */
-            return anchor.protocol + "//" + anchor.host + anchor.pathname + (qs ? "?" + qs : "") + anchor.hash;
+        if (typeof arr[0] !== 'object') {
+            return arr.indexOf(el) > -1;
         }
-
-        var probe = new Probe(options, inputValues);
-
-        // listening for messageEvent to trigger waiting events
-        window.addEventListener("message", probe.eventLoopManager.eventMessageHandler.bind(probe.eventLoopManager), true);
-
-        window.__PROBE__ = probe;
+        for (var a = 0; a < arr.length; a++) {
+            var found = true;
+            for (var k in arr[a]) {
+                if (arr[a][k] !== el[k] && ignoreProperties.indexOf(k) === -1) {
+                    found = false;
+                }
+            }
+            if (found) {
+                return true;
+            }
+        }
+        return false;
     }
+
+    function _replaceUrlQuery(url, qs) {
+        var anchor = document.createElement('a');
+        anchor.href = url;
+        /*
+         Example of content:
+         anchor.protocol; // => "http:"
+         anchor.host;     // => "example.com:3000"
+         anchor.hostname; // => "example.com"
+         anchor.port;     // => "3000"
+         anchor.pathname; // => "/pathname/"
+         anchor.hash;     // => "#hash"
+         anchor.search;   // => "?search=test"
+         */
+        return anchor.protocol + '//' + anchor.host + anchor.pathname + (qs ? '?' + qs : '') + anchor.hash;
+    }
+
 })();
