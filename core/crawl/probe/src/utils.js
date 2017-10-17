@@ -1,9 +1,15 @@
 (function () {
     'use strict';
+
     const fs = require('fs'),
         url = require('url');
 
+    const logger = require('../logger');
+
     const __PROBE_CONSTANTS__ = require('./constants').__PROBE_CONSTANTS__;
+
+    const setProbe = require('./probe').setProbe;
+    const EventLoopManager = require('./event-loop-manager').EventLoopManager;
 
     const ArgsParse = require('../node_modules/argparse').ArgumentParser;
 
@@ -181,17 +187,12 @@
 
         var inputValues = _generateRandomValues(options.random);
 
-        // adding constants to page
-        page.evaluate(function (__PROBE_CONSTANTS__) {
+        page.evaluate(setProbe, ...[options, inputValues, EventLoopManager]);
+
+        page.evaluate((options, __PROBE_CONSTANTS__) => {
+
+            // adding constants to page
             window.__PROBE_CONSTANTS__ = __PROBE_CONSTANTS__;
-        }, __PROBE_CONSTANTS__);
-
-        page.evaluate((options, inputValues) => {
-            let probe = new Probe(options, inputValues);
-            // listening for messageEvent to trigger waiting events
-            window.addEventListener('message', probe.eventLoopManager.eventMessageHandler.bind(probe.eventLoopManager), true);
-
-            window.__PROBE__ = probe;
 
             Node.prototype.__originalAddEventListener = Node.prototype.addEventListener;
             Node.prototype.addEventListener = function () {
@@ -341,7 +342,7 @@
                 attributeFilter: eventAttributeList,
             });
 
-        }, ...[options, inputValues]);
+        }, ...[options, __PROBE_CONSTANTS__]);
 
     };
 
