@@ -8,12 +8,9 @@
     const logger = require('./logger');
     const puppeteer = require('puppeteer');
 
-    // const analyse = require('./src/analyze');
-    // const probe = require('./src/probe');
-
     const constants = require('./src/constants');
     const utils = require('./src/utils');
-    let browser = undefined;
+    // const probe = require('./src/probe');
 
     let options = utils.getOptionsFromArgs();
 
@@ -25,23 +22,35 @@
     // DEBUG:
     // logger.info(options);
 
-    function _getPage() {
+    function _getBrowserAndPage() {
         return puppeteer.launch({
             headless: false,
         })
-            .then(function(createdBrowser) {
-                browser = createdBrowser;
-                return createdBrowser.newPage();
+            .then(createdBrowser => {
+                return createdBrowser.newPage()
+                    .then(createdPage => {
+                        return [createdBrowser, createdPage];
+                    });
             });
     }
 
-    function run(page) {
-        page.on('request', function(interceptedRequest) {
+    function run([browser, page]) {
+
+        page.on('request', interceptedRequest => {
             if (interceptedRequest.resourceType === 'image') {
                 interceptedRequest.abort();
             } else {
                 interceptedRequest.continue();
             }
+        });
+
+        page.on('console', consoleMessage => {
+            logger.log('notice', `console message: "${consoleMessage.type}", "${consoleMessage.text}"`);
+        });
+
+        page.on('dialog', dialog => {
+            logger.log('notice', `dialog: "${dialog.type}", "${dialog.message}"`);
+            dialog.accept();
         });
 
         Promise.all([
@@ -56,16 +65,16 @@
                     .then(function() {
                         page.screenshot({path: '/home/guillaume/Downloads/probe.png'})
                             .then(function() {
-                                browser.close();
+                                // browser.close();
                             });
                     });
             }, function(error) {
                 logger.error(error);
-                // process.abort(error);
+                process.exit(1);
             });
     }
 
-    _getPage()
+    _getBrowserAndPage()
         .then(run);
 
 })();
