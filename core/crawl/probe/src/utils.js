@@ -156,11 +156,10 @@
 
         if (args.httpAuth !== '') {
             let a = args.httpAuth.split(':');
-            options.httpAuth = [
-                a[0],
-                a.slice(1)
-                    .join(':'),
-            ];
+            options.httpAuth = {
+                username: a[0],
+                password: a[1],
+            };
         }
 
         if (args.sendPOST) {

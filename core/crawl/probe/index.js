@@ -45,12 +45,17 @@
         });
 
         page.on('console', consoleMessage => {
-            logger.log('notice', `console message: "${consoleMessage.type}", "${consoleMessage.text}"`);
+            logger.log('notice', `Console message: "${consoleMessage.type}", "${consoleMessage.text}"`);
         });
 
         page.on('dialog', dialog => {
-            logger.log('notice', `dialog: "${dialog.type}", "${dialog.message}"`);
+            logger.log('notice', `Dialog: "${dialog.type}", "${dialog.message}"`);
             dialog.accept();
+        });
+
+        page.on('error', error => {
+            logger.log('error', `Page crash: "${error.code}", "${error.message}"`);
+            process.exit(1);
         });
 
         Promise.all([
@@ -58,6 +63,7 @@
             page.setCookie(...options.cookies),
             page.setViewport(constants.viewport),
             page.setRequestInterceptionEnabled(true),
+            page.authenticate(options.httpAuth),
         ])
             .then(function() {
 
