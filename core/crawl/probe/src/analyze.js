@@ -19,77 +19,77 @@ window.page = page;
 // window.fs = fs;
 
 
-phantom.injectJs('functions.js');
-phantom.injectJs('options.js');
-phantom.injectJs('constants.js');
-phantom.injectJs('probe.js');
+// phantom.injectJs('functions.js');
+// phantom.injectJs('options.js');
+// phantom.injectJs('constants.js');
+// phantom.injectJs('probe.js');
 
 
 window.startTime = Date.now();
 
 window.response = null;
 
-var headers = {};
+// var headers = {};
 
-var page_settings = {encoding: 'utf8'};
+// var page_settings = {encoding: 'utf8'};
 // var random = 'IsHOulDb34RaNd0MsTR1ngbUt1mN0t';
 
-var args = [];//getopt(system.args, 'A:R:x:ftX:HOPD:c:p:r:');
+// var args = [];//getopt(system.args, 'A:R:x:ftX:HOPD:c:p:r:');
 
-args.opts.forEach(function(arg) {
-    switch (arg[0]) {
+// args.opts.forEach(function(arg) {
+//     switch (arg[0]) {
 
-        // case 'A': // -A <user agent> set user agent
-        //     options.userAgent = arg[1];
-        //     break;
-        // case 'R': // -R <string>     random string used to generate random values - the same random string will generate the same random values
-        //     options.random = arg[1];
-        //     break;
-        // case 'x': // -x <seconds>    maximum execution time
-        //     options.maxExecTime = parseInt(arg[1]) * 1000;
-        //     break;
-        //
-        // case 'f': // -f do NOT fill values in forms
-        //     options.fillValues = false;
-        //     break;
-        // case 't': // -t do NOT trigger events (onload only)
-        //     options.triggerEvents = false;
-        //     break;
-        // case 'X': // -X comma separated list of excluded urls
-        //     options.excludedUrls = arg[1].split(',');
-        //     break;
-        // case 'O': // -O do NOT override timeout functions
-        //     options.overrideTimeoutFunctions = false;
-        //     break;
-        //
-        // case 'c': // -c <path> set cookies from file (json)
-        //     try {
-        //         var cookie_file = fs.read(arg[1]);
-        //         options.cookies = JSON.parse(cookie_file);
-        //     } catch (e) {
-        //         console.log(e);
-        //         phantom.exit(1);
-        //     }
-        //     break;
-        //
-        // case 'r': // -r <url> set referer
-        //     options.referer = arg[1];
-        //     break;
-        //
-        // case 'p': // -p <user:pass>  http auth
-        //     var arr = arg[1].split(':');
-        //     options.httpAuth = [arr[0], arr.slice(1)
-        //         .join(':')];
-        //     break;
+// case 'A': // -A <user agent> set user agent
+//     options.userAgent = arg[1];
+//     break;
+// case 'R': // -R <string>     random string used to generate random values - the same random string will generate the same random values
+//     options.random = arg[1];
+//     break;
+// case 'x': // -x <seconds>    maximum execution time
+//     options.maxExecTime = parseInt(arg[1]) * 1000;
+//     break;
+//
+// case 'f': // -f do NOT fill values in forms
+//     options.fillValues = false;
+//     break;
+// case 't': // -t do NOT trigger events (onload only)
+//     options.triggerEvents = false;
+//     break;
+// case 'X': // -X comma separated list of excluded urls
+//     options.excludedUrls = arg[1].split(',');
+//     break;
+// case 'O': // -O do NOT override timeout functions
+//     options.overrideTimeoutFunctions = false;
+//     break;
+//
+// case 'c': // -c <path> set cookies from file (json)
+//     try {
+//         var cookie_file = fs.read(arg[1]);
+//         options.cookies = JSON.parse(cookie_file);
+//     } catch (e) {
+//         console.log(e);
+//         phantom.exit(1);
+//     }
+//     break;
+//
+// case 'r': // -r <url> set referer
+//     options.referer = arg[1];
+//     break;
+//
+// case 'p': // -p <user:pass>  http auth
+//     var arr = arg[1].split(':');
+//     options.httpAuth = [arr[0], arr.slice(1)
+//         .join(':')];
+//     break;
 
-        case 'P': // -P load page with POST
-            page_settings.operation = 'POST';
-            break;
-        case 'D': // -D POST data
-            page_settings.data = arg[1];
-            break;
-    }
-});
+// case 'P': // -P load page with POST
+//     page_settings.operation = 'POST';
+//     break;
+// case 'D': // -D POST data
+//     page_settings.data = arg[1];
+//     break;
+//     }
+// });
 
 // var site = args.args[1];
 //
@@ -124,8 +124,8 @@ page.onError = function(msg, lineNum, sourceId) {
 page.onAlert = function(msg) {
 };
 
-page.settings.userAgent = options.userAgent;
-page.settings.loadImages = false;
+// page.settings.userAgent = options.userAgent;
+// page.settings.loadImages = false;
 
 
 page.onResourceReceived = function(resource) {
@@ -213,36 +213,36 @@ page.onCallback = function(data) {
 };
 
 
-if (options.httpAuth) {
-    headers['Authorization'] = 'Basic ' + btoa(options.httpAuth[0] + ':' + options.httpAuth[1]);
-}
+// if (options.httpAuth) {
+//     headers['Authorization'] = 'Basic ' + btoa(options.httpAuth[0] + ':' + options.httpAuth[1]);
+// }
+//
+// if (options.referer) {
+//     headers['Referer'] = options.referer;
+// }
 
-if (options.referer) {
-    headers['Referer'] = options.referer;
-}
-
-page.customHeaders = headers;
+// page.customHeaders = headers;
 
 
-for (var a = 0; a < options.setCookies.length; a++) {
-    // maybe this is wrogn acconding to rfc .. but phantomjs cannot set cookie witout a domain...
-    if (!options.setCookies[a].domain) {
-        var purl = document.createElement('a');
-        purl.href = site;
-        options.setCookies[a].domain = purl.hostname;
-    }
-    if (options.setCookies[a].expires) {
-        options.setCookies[a].expires *= 1000;
-    }
+// for (var a = 0; a < options.setCookies.length; a++) {
+//     // maybe this is wrogn acconding to rfc .. but phantomjs cannot set cookie witout a domain...
+//     if (!options.setCookies[a].domain) {
+//         var purl = document.createElement('a');
+//         purl.href = site;
+//         options.setCookies[a].domain = purl.hostname;
+//     }
+//     if (options.setCookies[a].expires) {
+//         options.setCookies[a].expires *= 1000;
+//     }
+//
+//     phantom.addCookie(options.setCookies[a]);
+//
+// }
 
-    phantom.addCookie(options.setCookies[a]);
-
-}
-
-page.viewportSize = {
-    width: 1920,
-    height: 1080,
-};
+// page.viewportSize = {
+//     width: 1920,
+//     height: 1080,
+// };
 
 
 page.open(site, page_settings, function(status) {

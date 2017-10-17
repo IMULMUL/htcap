@@ -35,14 +35,6 @@
                 defaultValue: 'IsHOulDb34RaNd0MsTR1ngbUt1mN0t',
             },
         );
-        // argumentParser.addArgument(
-        //     '-x',
-        //     {
-        //         help: 'maximum execution time',
-        //         dest: 'maxExecTime',
-        //         defaultValue: 100000, // 100 seconds
-        //     },
-        // );
         argumentParser.addArgument(
             '-f',
             {
@@ -133,7 +125,7 @@
 
         args = argumentParser.parseArgs();
 
-        if (!args.startUrl.match('^http')) {
+        if (!args.startUrl.startsWith('http')) {
             argumentParser.error('invalid starting url: "' + args.startUrl + '"');
         }
 
@@ -146,7 +138,6 @@
 
         options.userAgent = args.userAgent;
         options.random = args.random;
-        options.maxExecTime = parseInt(args.maxExecTime) * 1000;
         options.fillValues = args.fillValues;
         options.triggerEvents = args.triggerEvents;
         options.excludedUrls = args.excludedUrls !== '' ? args.excludedUrls.split(',') : [];
