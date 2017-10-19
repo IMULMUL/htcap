@@ -29,13 +29,15 @@
 
         /* always trigger these events since event delegation mays "confuse" the triggering of mapped events */
         triggerableEvents: {
-            'button': ['click', 'keyup', 'keydown'],
-            'select': ['change', 'click', 'keyup', 'keydown'],
-            'input': ['change', 'click', 'blur', 'focus', 'keyup', 'keydown'],
-            'a': ['click', 'keyup', 'keydown'],
-            'textarea': ['change', 'click', 'blur', 'focus', 'keyup', 'keydown'],
-            'span': ['click'],
-            'td': ['click'],
+            'button': ['click', 'keyup', 'keydown', 'mouseup', 'mousedown'],
+            'select': ['change', 'click', 'keyup', 'keydown', 'mouseup', 'mousedown'],
+            'input': ['change', 'click', 'blur', 'focus', 'keyup', 'keydown', 'mouseup', 'mousedown'],
+            'a': ['click', 'keyup', 'keydown', 'mouseup', 'mousedown'],
+            'textarea': ['change', 'click', 'blur', 'focus', 'keyup', 'keydown', 'mouseup', 'mousedown'],
+            'span': ['click', 'mouseup', 'mousedown'],
+            'td': ['click', 'mouseup', 'mousedown'],
+            'tr': ['click', 'mouseup', 'mousedown'],
+            'div': ['click', 'mouseup', 'mousedown'],
         },
 
         // map input names to string generators. see generateRandomValues to see all available generators
