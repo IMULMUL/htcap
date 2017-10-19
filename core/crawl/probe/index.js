@@ -1,4 +1,10 @@
-//TODO: make possible to send POST request and custom headers on page.goto() see: https://github.com/GoogleChrome/puppeteer/issues/1062
+/**
+ * @todo:
+ * - make possible to send POST request and custom headers on page.goto() see: https://github.com/GoogleChrome/puppeteer/issues/1062
+ * - return error on failed resources (like in `printStatus()`)
+ * - return the cookies before/after starting analysis
+ * -
+ */
 
 (function() {
     'use strict';
@@ -37,7 +43,8 @@
     function run([browser, page]) {
 
         page.on('request', interceptedRequest => {
-            logger.info(`intercepted request: ${interceptedRequest.resourceType} ${interceptedRequest.url}`);
+            //DEBUG:
+            // logger.info(`intercepted request: ${interceptedRequest.resourceType} ${interceptedRequest.url}`);
 
             // block image loading
             if (interceptedRequest.resourceType === 'image') {
@@ -48,11 +55,11 @@
         });
 
         page.on('console', consoleMessage => {
-            logger.log('debug', `Console message, type "${consoleMessage.type}": "${consoleMessage.text}"`);
+            logger.log('debug', `Page console message, type "${consoleMessage.type}": "${consoleMessage.text}"`);
         });
 
         page.on('dialog', dialog => {
-            logger.log('debug', `Dialog, type "${dialog.type}": "${dialog.message()}"`);
+            logger.log('debug', `Page dialog, type "${dialog.type}": "${dialog.message()}"`);
             dialog.accept();
         });
 
@@ -60,12 +67,38 @@
             logger.log('warn', `Page crash: "${error.code}", "${error.message()}"`);
             process.exit(1);
         });
+
+        //DEBUG:
         page.on('frameattached', frameTo => {
             logger.info(`frameattached to ${frameTo.url()}`);
         });
-
+        //DEBUG:
         page.on('framenavigated', frameTo => {
             logger.info(`framenavigated to ${frameTo.url()}`);
+        });
+        //DEBUG:
+        page.on('requestfailed', failedRequest => {
+            logger.info(`requestfailed: ${failedRequest.url}`);
+        });
+        //DEBUG:
+        page.on('requestfinished', finishedRequest => {
+            // logger.info(`requestfinished: ${finishedRequest.url}`);
+        });
+        //DEBUG:
+        page.on('load', () => {
+            logger.debug('load done');
+        });
+
+
+        // set function to return value from probe
+        page.exposeFunction('__PROBE_FN_RETURN_STRING__', (request) => {
+            logger.info(`Probe return: ${request}`);
+        });
+
+        // set function to request end from probe
+        page.exposeFunction('__PROBE_FN_REQUEST_END__', () => {
+            logger.info('Probe finished, closing the browser.');
+            browser.close();
         });
 
         Promise.all([
@@ -77,10 +110,6 @@
         ])
             .then(
                 () => {
-                    //DEBUG:
-                    page.evaluate(() => {
-                        console.info(document.documentElement.innerHTML);
-                    });
 
                     let inputValues = utils.generateRandomValues(options.random);
 
@@ -89,6 +118,9 @@
 
                     page.goto(options.startUrl.href, {waitUntil: 'networkidle'})
                         .then(() => {
+
+                            // DEBUG:
+                            logger.info('starting the probe');
 
                             page.evaluate(() => {
                                 window.__PROBE__.startAnalysis();

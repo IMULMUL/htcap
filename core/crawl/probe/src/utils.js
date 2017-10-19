@@ -5,11 +5,6 @@
         url = require('url');
 
     const logger = require('../logger');
-
-    const __PROBE_CONSTANTS__ = require('./constants').__PROBE_CONSTANTS__;
-
-    const setProbe = require('./probe').setProbe;
-
     const ArgsParse = require('../node_modules/argparse').ArgumentParser;
 
 
@@ -181,7 +176,6 @@
         return options;
 
     }
-
 
 
     /**

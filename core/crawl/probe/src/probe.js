@@ -150,7 +150,9 @@
                 } else {
                     // DEBUG:
                     console.log('eventLoop END');
-                    window.__callPhantom({cmd: 'end'});
+                    // window.__callPhantom({cmd: 'end'});
+                    window.__PROBE__.printRequests();
+                    window.__PROBE_FN_REQUEST_END__();
                 }
             }
 
@@ -723,6 +725,10 @@
              * @private
              */
             _printRequestFromATag(element) {
+                // DEBUG:
+                // if (element.tagName.toLowerCase() === 'a') {
+                //     console.log(element.href);
+                // }
                 if (element.tagName.toLowerCase() === 'a' && element.hasAttribute('href')) {
                     this.printLink(element.href);
                 }
@@ -756,7 +762,8 @@
         }
 
         function _print(str) {
-            console.log(str);
+            // console.log(str);
+            window.__PROBE_FN_RETURN_STRING__(str);
             // window.__callPhantom({cmd: 'print', argument: str});
         }
 
@@ -876,8 +883,7 @@
             XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
 
                 var _url = window.__PROBE__.removeUrlParameter(url, '_');
-                // FIXME [GG]: Request do not exist inside __PROBE__ anymore
-                this.__request = new window.__PROBE__.Request('xhr', method, _url);
+                this.__request = new Request('xhr', method, _url);
 
                 // adding XHR listener
                 this.addEventListener('readystatechange', function() {
