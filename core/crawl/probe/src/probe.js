@@ -13,7 +13,7 @@
     'use strict';
 
 
-    exports.setProbe = function setProbe(options, inputValues, __PROBE_CONSTANTS__) {
+    exports.setProbe = function setProbe(options, inputValues, constants) {
 
         /**
          * EventLoop Manager
@@ -42,11 +42,13 @@
          */
         class EventLoopManager {
 
-            /*
+            /**
              * @param probe the probe from where it's initialized
+             * @param config - configurations of the manager
              * @constructor
              */
-            constructor(probe) {
+            constructor(probe, config) {
+                this._config = config;
                 this._probe = probe;
                 this._DOMAssessmentQueue = [];
                 this._toBeTriggeredEventsQueue = [];
@@ -69,11 +71,11 @@
                 if (eventMessage.source === window && eventMessage.data.from === 'htcap') {
                     eventMessage.stopPropagation();
 
-                    if (eventMessage.data.name === __PROBE_CONSTANTS__.messageEvent.eventLoopReady.name) {
+                    if (eventMessage.data.name === this._config.messageEvent.name) {
 
                         // waiting x number eventLoop before doing anything (x being the buffer size)
-                        if (this._emptyLoopCounter < __PROBE_CONSTANTS__.eventLoop.bufferCycleSize) {
-                            window.postMessage(__PROBE_CONSTANTS__.messageEvent.eventLoopReady, '*');
+                        if (this._emptyLoopCounter < this._config.bufferCycleSize) {
+                            window.postMessage(this._config.messageEvent, '*');
                             this._emptyLoopCounter += 1;
                         } else {
                             this._emptyLoopCounter = 0;
@@ -85,13 +87,12 @@
 
             /**
              * start the eventLoopManager
-             * @static
              */
-            static start() {
+            start() {
                 // DEBUG:
                 console.log('eventLoop start');
 
-                window.postMessage(__PROBE_CONSTANTS__.messageEvent.eventLoopReady, '*');
+                window.postMessage(this._config.messageEvent, '*');
             }
 
             /**
@@ -112,14 +113,14 @@
 
                 if (this._sentXHRQueue.length > 0) { // if there is XHR waiting to be resolved
                     // releasing the eventLoop waiting for resolution
-                    window.postMessage(__PROBE_CONSTANTS__.messageEvent.eventLoopReady, '*');
+                    window.postMessage(this._config.messageEvent, '*');
 
                 } else if (this._doneXHRQueue.length > 0) { // if there is XHR done
                     this._doneXHRQueue.shift();
 
                     window.__originalSetTimeout(function() {
-                        window.postMessage(__PROBE_CONSTANTS__.messageEvent.eventLoopReady, '*');
-                    }, __PROBE_CONSTANTS__.eventLoop.afterDoneXHRTimeout);
+                        window.postMessage(this._config.messageEvent, '*');
+                    }.bind(this), this._config.afterDoneXHRTimeout);
 
                 } else if (this._DOMAssessmentQueue.length > 0) { // if there is DOMAssessment waiting
 
@@ -129,7 +130,7 @@
 
                     // starting analyze on the next element
                     this._probe._analyzeDOMElement(element);
-                    window.postMessage(__PROBE_CONSTANTS__.messageEvent.eventLoopReady, '*');
+                    window.postMessage(this._config.messageEvent, '*');
 
                 } else if (this._toBeTriggeredEventsQueue.length > 0) { // if there is event waiting
                     // retrieving the next pageEvent
@@ -145,13 +146,13 @@
                     pageEvent.trigger();
 
                     window.__originalSetTimeout(function() {
-                        window.postMessage(__PROBE_CONSTANTS__.messageEvent.eventLoopReady, '*');
-                    }, __PROBE_CONSTANTS__.eventLoop.afterEventTriggeredTimeout);
+                        window.postMessage(this._config.messageEvent, '*');
+                    }.bind(this), this._config.afterEventTriggeredTimeout);
                 } else {
                     // DEBUG:
                     console.log('eventLoop END');
                     // window.__callPhantom({cmd: 'end'});
-                    window.__PROBE__.printRequests();
+                    this._probe.printRequests();
                     window.__PROBE_FN_REQUEST_END__();
                 }
             }
@@ -343,7 +344,7 @@
 
                 this.sentXHRs = [];
 
-                this.eventLoopManager = new EventLoopManager(this);
+                this.eventLoopManager = new EventLoopManager(this, window.__PROBE_CONSTANTS__.eventLoopConfig);
 
                 this.requestToPrint = [];
                 this._currentPageEvent = undefined;
@@ -512,7 +513,7 @@
                 }
 
                 // starting the eventLoop manager
-                EventLoopManager.start();
+                this.eventLoopManager.start();
             }
 
             removeUrlParameter(url, par) {
@@ -547,7 +548,7 @@
 
                 var setv = function(name) {
                     var ret = _this.getRandomValue('string');
-                    __PROBE_CONSTANTS__.inputNameMatchValue.forEach(function(matchValue) {
+                    window.__PROBE_CONSTANTS__.inputNameMatchValue.forEach(function(matchValue) {
                         var regexp = new RegExp(matchValue.name, 'gi');
                         if (name.match(regexp)) {
                             ret = _this.getRandomValue(matchValue.value);
@@ -665,9 +666,9 @@
                     }
                 }
 
-                for (var selector in __PROBE_CONSTANTS__.triggerableEvents) {
+                for (var selector in window.__PROBE_CONSTANTS__.triggerableEvents) {
                     if (element.webkitMatchesSelector(selector)) {
-                        events = events.concat(__PROBE_CONSTANTS__.triggerableEvents[selector]);
+                        events = events.concat(window.__PROBE_CONSTANTS__.triggerableEvents[selector]);
                     }
                 }
 
@@ -699,7 +700,7 @@
              * @private
              */
             _mapElementEvents(element) {
-                __PROBE_CONSTANTS__.mappableEvents.forEach(function(eventName) {
+                window.__PROBE_CONSTANTS__.mappableEvents.forEach(function(eventName) {
                     var onEventName = 'on' + eventName;
 
                     if (onEventName in element && element[onEventName]) {
@@ -1016,7 +1017,7 @@
             // DEBUG:
             console.log('setting the probe');
             // adding constants to page
-            window.__PROBE_CONSTANTS__ = __PROBE_CONSTANTS__;
+            window.__PROBE_CONSTANTS__ = constants;
 
             let probe = new Probe(options, inputValues);
 

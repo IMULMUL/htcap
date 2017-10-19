@@ -18,7 +18,7 @@
     const logger = require('./logger');
     const puppeteer = require('puppeteer');
 
-    const __PROBE_CONSTANTS__ = require('./src/constants').__PROBE_CONSTANTS__;
+    const constants = require('./src/constants').constants;
     const utils = require('./src/utils');
     const setProbe = require('./src/probe').setProbe;
 
@@ -110,7 +110,7 @@
         Promise.all([
             page.setUserAgent(options.userAgent),
             page.setCookie(...options.cookies),
-            page.setViewport(__PROBE_CONSTANTS__.viewport),
+            page.setViewport(constants.viewport),
             page.setRequestInterceptionEnabled(true),
             page.authenticate(options.httpAuth),
         ])
@@ -120,7 +120,7 @@
                     let inputValues = utils.generateRandomValues(options.random);
 
                     // initializing the probe into the page context
-                    page.evaluateOnNewDocument(setProbe, ...[options, inputValues, __PROBE_CONSTANTS__]);
+                    page.evaluateOnNewDocument(setProbe, ...[options, inputValues, constants]);
 
                     page.goto(options.startUrl.href, {waitUntil: 'networkidle'})
                         .then(() => {

@@ -1,16 +1,15 @@
 (function() {
     'use strict';
 
-    exports.__PROBE_CONSTANTS__ = {
+    exports.constants = {
         XHRTimeout: 5000,
 
-        messageEvent: {
-            eventLoopReady: {
+
+        eventLoopConfig: {
+            messageEvent: {
                 from: 'htcap',
                 name: 'event-loop-ready',
             },
-        },
-        eventLoop: {
             bufferCycleSize: 100, // number of event loop cycle between every new action proceed in the eventLoop
             afterEventTriggeredTimeout: 1, // after triggering an event, time in ms to wait before requesting another eventLoop cycle
             afterDoneXHRTimeout: 10, // after a done XHR, time in ms to before requesting another eventLoop cycle
