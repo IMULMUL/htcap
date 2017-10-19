@@ -9,7 +9,6 @@
     const __PROBE_CONSTANTS__ = require('./constants').__PROBE_CONSTANTS__;
 
     const setProbe = require('./probe').setProbe;
-    const EventLoopManager = require('./event-loop-manager').EventLoopManager;
 
     const ArgsParse = require('../node_modules/argparse').ArgumentParser;
 
@@ -183,168 +182,7 @@
 
     }
 
-    exports.initializeProbe = function (page, options) {
 
-        var inputValues = _generateRandomValues(options.random);
-
-        page.evaluate(setProbe, ...[options, inputValues, EventLoopManager]);
-
-        page.evaluate((options, __PROBE_CONSTANTS__) => {
-
-            // adding constants to page
-            window.__PROBE_CONSTANTS__ = __PROBE_CONSTANTS__;
-
-            Node.prototype.__originalAddEventListener = Node.prototype.addEventListener;
-            Node.prototype.addEventListener = function () {
-                if (arguments[0] !== 'DOMContentLoaded') { // is this ok???
-                    window.__PROBE__.addEventToMap(this, arguments[0]);
-                }
-                this.__originalAddEventListener.apply(this, arguments);
-            };
-
-            window.__originalAddEventListener = window.addEventListener;
-            window.addEventListener = function () {
-                if (arguments[0] !== 'load') { // is this ok???
-                    window.__PROBE__.addEventToMap(this, arguments[0]);
-                }
-                window.__originalAddEventListener.apply(this, arguments);
-            };
-
-            XMLHttpRequest.prototype.__originalOpen = XMLHttpRequest.prototype.open;
-            XMLHttpRequest.prototype.open = function (method, url, async, user, password) {
-
-                var _url = window.__PROBE__.removeUrlParameter(url, '_');
-                this.__request = new window.__PROBE__.Request('xhr', method, _url);
-
-                // adding XHR listener
-                this.addEventListener('readystatechange', function () {
-                    // if not finish, it's open
-                    // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/readyState
-                    if (this.readyState >= 1 && this.readyState < 4) {
-                        window.__PROBE__.eventLoopManager.sentXHR(this);
-                    } else if (this.readyState === 4) {
-                        // /!\ DONE means that the XHR finish but could have FAILED
-                        window.__PROBE__.eventLoopManager.doneXHR(this);
-                    }
-                });
-                this.addEventListener('error', function () {
-                    window.__PROBE__.eventLoopManager.inErrorXHR(this);
-                });
-                this.addEventListener('abort', function () {
-                    window.__PROBE__.eventLoopManager.inErrorXHR(this);
-                });
-                this.addEventListener('timeout', function () {
-                    window.__PROBE__.eventLoopManager.inErrorXHR(this);
-                });
-
-                this.timeout = constants.XHRTimeout;
-
-                return this.__originalOpen(method, url, async, user, password);
-            };
-
-            XMLHttpRequest.prototype.__originalSend = XMLHttpRequest.prototype.send;
-            XMLHttpRequest.prototype.send = function (data) {
-                this.__request.data = data;
-                this.__request.triggerer = window.__PROBE__.getLastTriggerPageEvent();
-
-                var absurl = window.__PROBE__.getAbsoluteUrl(this.__request.url);
-                for (var a = 0; a < options.excludedUrls.length; a++) {
-                    if (absurl.match(options.excludedUrls[a])) {
-                        this.__skipped = true;
-                    }
-                }
-
-                // check if request has already been sent
-                var requestKey = this.__request.key;
-                if (window.__PROBE__.sentXHRs.indexOf(requestKey) !== -1) {
-                    return;
-                }
-
-                window.__PROBE__.sentXHRs.push(requestKey);
-                window.__PROBE__.addToRequestToPrint(this.__request);
-
-                if (!this.__skipped) {
-                    return this.__originalSend(data);
-                }
-            };
-
-            Node.prototype.__originalAppendChild = Node.prototype.appendChild;
-            Node.prototype.appendChild = function (node) {
-                window.__PROBE__.printJSONP(node);
-                return this.__originalAppendChild(node);
-            };
-
-            Node.prototype.__originalInsertBefore = Node.prototype.insertBefore;
-            Node.prototype.insertBefore = function (node, element) {
-                window.__PROBE__.printJSONP(node);
-                return this.__originalInsertBefore(node, element);
-            };
-
-            Node.prototype.__originalReplaceChild = Node.prototype.replaceChild;
-            Node.prototype.replaceChild = function (node, oldNode) {
-                window.__PROBE__.printJSONP(node);
-                return this.__originalReplaceChild(node, oldNode);
-            };
-
-            window.WebSocket = (function (WebSocket) {
-                return function (url) {
-                    window.__PROBE__.printWebsocket(url);
-                    return WebSocket.prototype;
-                };
-            })(window.WebSocket);
-
-            if (options.overrideTimeoutFunctions) {
-                window.__originalSetTimeout = window.setTimeout;
-                window.setTimeout = function () {
-                    // Forcing a delay of 0
-                    arguments[1] = 0;
-                    return window.__originalSetTimeout.apply(this, arguments);
-                };
-
-                window.__originalSetInterval = window.setInterval;
-                window.setInterval = function () {
-                    // Forcing a delay of 0
-                    arguments[1] = 0;
-                    return window.__originalSetInterval.apply(this, arguments);
-                };
-
-            }
-
-            HTMLFormElement.prototype.__originalSubmit = HTMLFormElement.prototype.submit;
-            HTMLFormElement.prototype.submit = function () {
-                window.__PROBE__.addToRequestToPrint(window.__PROBE__.getFormAsRequest(this));
-                return this.__originalSubmit();
-            };
-
-            // prevent window.close
-            window.close = function () {
-            };
-
-            window.open = function (url) {
-                window.__PROBE__.printLink(url);
-            };
-
-            // create an observer instance for DOM changes
-            var observer = new WebKitMutationObserver(function (mutations) {
-                window.__PROBE__.eventLoopManager.nodeMutated(mutations);
-            });
-            var eventAttributeList = ['src', 'href'];
-            window.__PROBE_CONSTANTS__.mappableEvents.forEach(function (event) {
-                eventAttributeList.push('on' + event);
-            });
-            // observing for any change on document and its children
-            observer.observe(document.documentElement, {
-                childList: true,
-                attributes: true,
-                characterData: false,
-                subtree: true,
-                characterDataOldValue: false,
-                attributeFilter: eventAttributeList,
-            });
-
-        }, ...[options, __PROBE_CONSTANTS__]);
-
-    };
 
     /**
      * generate a static map of random values using a "static" seed for input fields
@@ -358,7 +196,7 @@
      * @return {{}}
      * @private
      */
-    function _generateRandomValues(seed) {
+    exports.generateRandomValues = function (seed) {
         var values = {},
             letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
             numbers = '0123456789',

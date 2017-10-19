@@ -104,25 +104,25 @@ console.log('[');
 // setTimeout(execTimedOut, options.maxExecTime);
 
 
-phantom.onError = function(msg, trace) {
-    var msgStack = ['PHANTOM ERROR: ' + msg];
-    if (trace && trace.length) {
-        msgStack.push('TRACE:');
-        trace.forEach(function(t) {
-            msgStack.push(' -> ' + (t.file || t.sourceURL) + ': ' + t.line + (t.function ? ' (in function ' + t.function + ')' : ''));
-        });
-    }
-    console.error(msgStack.join('\n'));
-    phantom.exit(1);
-};
+// phantom.onError = function(msg, trace) {
+//     var msgStack = ['PHANTOM ERROR: ' + msg];
+//     if (trace && trace.length) {
+//         msgStack.push('TRACE:');
+//         trace.forEach(function(t) {
+//             msgStack.push(' -> ' + (t.file || t.sourceURL) + ': ' + t.line + (t.function ? ' (in function ' + t.function + ')' : ''));
+//         });
+//     }
+//     console.error(msgStack.join('\n'));
+//     phantom.exit(1);
+// };
 
 
-page.onConsoleMessage = function(msg, lineNum, sourceId) {
-};
-page.onError = function(msg, lineNum, sourceId) {
-};
-page.onAlert = function(msg) {
-};
+// page.onConsoleMessage = function(msg, lineNum, sourceId) {
+// };
+// page.onError = function(msg, lineNum, sourceId) {
+// };
+// page.onAlert = function(msg) {
+// };
 
 // page.settings.userAgent = options.userAgent;
 // page.settings.loadImages = false;
@@ -169,30 +169,30 @@ page.onNavigationRequested = function(url, type) {
     page.navigationLocked = true;
 };
 
-page.onConfirm = function() {
-    return true;
-}; // recently changed
+// page.onConfirm = function() {
+//     return true;
+// }; // recently changed
 
 /*
  phantomjs issue #11684 workaround
  https://github.com/ariya/phantomjs/issues/11684
  */
-var isPageInitialized = false;
-page.onInitialized = function() {
-    if (isPageInitialized) {
-        return;
-    }
-    isPageInitialized = true;
+// var isPageInitialized = false;
+// page.onInitialized = function() {
+//     if (isPageInitialized) {
+//         return;
+//     }
+//     isPageInitialized = true;
 
-    // try to hide phantomjs
-    page.evaluate(function() {
-        window.__callPhantom = window.callPhantom;
-        delete window.callPhantom;
-    });
+// // try to hide phantomjs
+// page.evaluate(function() {
+//     window.__callPhantom = window.callPhantom;
+//     delete window.callPhantom;
+// });
 
-    startProbe(options.random);
+// startProbe(options.random);
 
-};
+// };
 
 
 page.onCallback = function(data) {
@@ -216,10 +216,10 @@ page.onCallback = function(data) {
 // if (options.httpAuth) {
 //     headers['Authorization'] = 'Basic ' + btoa(options.httpAuth[0] + ':' + options.httpAuth[1]);
 // }
-//
-// if (options.referer) {
-//     headers['Referer'] = options.referer;
-// }
+
+if (options.referer) {
+    headers['Referer'] = options.referer;
+}
 
 // page.customHeaders = headers;
 
@@ -278,6 +278,8 @@ page.open(site, page_settings, function(status) {
     page.evaluate(function() {
         console.log('startAnalysis');
         // starting page analysis
+        console.log('page initialized ');
+
         window.__PROBE__.startAnalysis();
     });
 
