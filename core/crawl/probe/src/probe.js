@@ -90,7 +90,7 @@
              */
             start() {
                 // DEBUG:
-                console.log('eventLoop start');
+                console.debug('eventLoop start');
 
                 window.postMessage(this._config.messageEvent, '*');
             }
@@ -105,11 +105,11 @@
             doNextAction() {
 
                 // DEBUG:
-                // if (this._sentXHRQueue.length <= 0) {            // avoiding noise
-                //     console.log('eventLoop doNextAction - done:', this._doneXHRQueue.length,
-                //         ', DOM:', this._DOMAssessmentQueue.length,
-                //         ', event:', this._toBeTriggeredEventsQueue.length);
-                // }
+                if (this._sentXHRQueue.length <= 0) {            // avoiding noise
+                    console.debug('eventLoop doNextAction - done:', this._doneXHRQueue.length,
+                        ', DOM:', this._DOMAssessmentQueue.length,
+                        ', event:', this._toBeTriggeredEventsQueue.length);
+                }
 
                 if (this._sentXHRQueue.length > 0) { // if there is XHR waiting to be resolved
                     // releasing the eventLoop waiting for resolution
@@ -126,7 +126,7 @@
 
                     var element = this._DOMAssessmentQueue.shift();
                     // DEBUG:
-                    // console.log('eventLoop analyzeDOM: ' + _elementToString(element));
+                    // console.debug('eventLoop analyzeDOM: ' + _elementToString(element));
 
                     // starting analyze on the next element
                     this._probe._analyzeDOMElement(element);
@@ -140,7 +140,7 @@
                     this._probe._currentPageEvent = pageEvent;
 
                     // DEBUG:
-                    // console.log('eventLoop pageEvent.trigger', pageEvent.element.tagName, pageEvent.eventName);
+                    // console.debug('eventLoop pageEvent.trigger', pageEvent.element.tagName, pageEvent.eventName);
 
                     // Triggering the event
                     pageEvent.trigger();
@@ -150,7 +150,7 @@
                     }.bind(this), this._config.afterEventTriggeredTimeout);
                 } else {
                     // DEBUG:
-                    console.log('eventLoop END');
+                    console.debug('eventLoop END');
                     // window.__callPhantom({cmd: 'end'});
                     this._probe.printRequests();
                     window.__PROBE_FN_REQUEST_END__();
@@ -165,25 +165,25 @@
 
             nodeMutated(mutations) {
                 // DEBUG:
-                // console.log('eventLoop nodesMutated:', mutations.length);
+                // console.debug('eventLoop nodesMutated:', mutations.length);
                 mutations.forEach(function(mutationRecord) {
                     if (mutationRecord.type === 'childList') {
                         for (var i = 0; i < mutationRecord.addedNodes.length; i++) {
                             var addedNode = mutationRecord.addedNodes[i];
                             // DEBUG:
-                            // console.log('added:', _elementToString(mutationRecord.addedNodes[i]), mutationRecord.addedNodes[i]);
+                            // console.debug('added:', _elementToString(mutationRecord.addedNodes[i]), mutationRecord.addedNodes[i]);
 
                             // see: https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeType#Constants
                             if (addedNode.nodeType === Node.ELEMENT_NODE) {
                                 // DEBUG:
-                                // console.log('added:', addedNode);
+                                // console.debug('added:', addedNode);
                                 this.scheduleDOMAssessment(addedNode);
                             }
                         }
                     } else if (mutationRecord.type === 'attributes') {
                         var element = mutationRecord.target;
                         // DEBUG:
-                        // console.log('eventLoop nodeMutated: attributes', _elementToString(element), mutationRecord.attributeName);
+                        // console.debug('eventLoop nodeMutated: attributes', _elementToString(element), mutationRecord.attributeName);
                         this._probe._triggeredPageEvents.forEach(function(pageEvent, index) {
                             if (pageEvent.element === element) {
                                 this._probe._triggeredPageEvents.splice(index, 1);
@@ -198,7 +198,7 @@
             scheduleEventTriggering(pageEvent) {
                 if (this._toBeTriggeredEventsQueue.indexOf(pageEvent) < 0) {
                     // DEBUG:
-                    // console.log('eventLoop scheduleEventTriggering');
+                    // console.debug(`eventLoop scheduleEventTriggering: "${pageEvent.element.outerHTML}"  ${pageEvent.eventName}`);
                     this._toBeTriggeredEventsQueue.push(pageEvent);
                 }
             }
@@ -206,7 +206,7 @@
             sentXHR(request) {
                 if (this._sentXHRQueue.indexOf(request) < 0) {
                     // DEBUG:
-                    // console.log('eventLoop sentXHR');
+                    // console.debug('eventLoop sentXHR');
                     this._sentXHRQueue.push(request);
                 }
             }
@@ -214,7 +214,7 @@
             doneXHR(request) {
                 if (this._doneXHRQueue.indexOf(request) < 0) {
                     // DEBUG:
-                    // console.log('eventLoop doneXHR');
+                    // console.debug('eventLoop doneXHR');
 
                     // if the request is in the sentXHR queue
                     var i = this._sentXHRQueue.indexOf(request);
@@ -228,7 +228,7 @@
 
             inErrorXHR(request) {
                 // DEBUG:
-                // console.log('eventLoop inErrorXHR');
+                // console.debug('eventLoop inErrorXHR');
             }
         }
 
@@ -315,7 +315,7 @@
             trigger() {
 
                 // DEBUG:
-                // console.log('PageEvent triggering events for : ', _elementToString(this.element), this.eventName);
+                // console.debug('PageEvent triggering events for : ', _elementToString(this.element), this.eventName);
 
                 if ('createEvent' in document) {
                     var evt = document.createEvent('HTMLEvents');
@@ -363,7 +363,7 @@
 
             printRequests() {
                 this.requestToPrint.forEach(function(request) {
-                    _print('["request",' + request + '],');
+                    window.__PROBE_FN_RETURN_STRING__('["request",' + request + '],');
                 });
             }
 
@@ -686,9 +686,9 @@
                 events.forEach(function(eventName) {
                     var pageEvent = new PageEvent(element, eventName);
                     // DEBUG:
-                    // console.log("triggering events for : " + _elementToString(element) + " " + eventName);
+                    // console.debug('triggering events for : ' + _elementToString(element) + ' ' + eventName);
 
-                    if (_isEventTriggerable(eventName) && !_objectInArray(this._triggeredPageEvents, pageEvent)) {
+                    if (!['load', 'unload', 'beforeunload'].includes(eventName) && !_objectInArray(this._triggeredPageEvents, pageEvent)) {
                         this._triggeredPageEvents.push(pageEvent);
                         this._trigger(pageEvent);
                     }
@@ -726,10 +726,6 @@
              * @private
              */
             _printRequestFromATag(element) {
-                // DEBUG:
-                // if (element.tagName.toLowerCase() === 'a') {
-                //     console.log(element.href);
-                // }
                 if (element.tagName.toLowerCase() === 'a' && element.hasAttribute('href')) {
                     this.printLink(element.href);
                 }
@@ -760,12 +756,6 @@
                     this._triggerElementEvents(element);
                 }
             }
-        }
-
-        function _print(str) {
-            // console.log(str);
-            window.__PROBE_FN_RETURN_STRING__(str);
-            // window.__callPhantom({cmd: 'print', argument: str});
         }
 
         /**
@@ -806,26 +796,14 @@
         }
 
         /**
-         * @param eventName
-         * @returns {boolean}
-         * @private
-         * @static
-         */
-        function _isEventTriggerable(eventName) {
-            return ['load', 'unload', 'beforeunload'].indexOf(eventName) === -1;
-        }
-
-        /**
          *
          * @param arr
          * @param el
-         * @param ignoreProperties
          * @returns {boolean}
          * @private
          * @static
          */
-        function _objectInArray(arr, el, ignoreProperties) {
-            ignoreProperties = ignoreProperties || [];
+        function _objectInArray(arr, el) {
             if (arr.length === 0) {
                 return false;
             }
@@ -835,7 +813,7 @@
             for (var a = 0; a < arr.length; a++) {
                 var found = true;
                 for (var k in arr[a]) {
-                    if (arr[a][k] !== el[k] && ignoreProperties.indexOf(k) === -1) {
+                    if (arr[a][k] !== el[k]) {
                         found = false;
                     }
                 }
@@ -862,11 +840,13 @@
             return anchor.protocol + '//' + anchor.host + anchor.pathname + (qs ? '?' + qs : '') + anchor.hash;
         }
 
-        function _initializeProbeHook(excludedUrls, overrideTimeoutFunctions) {
+        function _initializeProbeHook(excludedUrls, overrideTimeoutFunctions, XHRTimeout) {
 
             Node.prototype.__originalAddEventListener = Node.prototype.addEventListener;
             Node.prototype.addEventListener = function() {
-                if (arguments[0] !== 'DOMContentLoaded') { // is this ok???
+                // if event is note related to content loading
+                // see: https://developer.mozilla.org/en-US/docs/Web/Events
+                if (!['DOMContentLoaded', 'readystatechange'].includes(arguments[0])) {
                     window.__PROBE__.addEventToMap(this, arguments[0]);
                 }
                 this.__originalAddEventListener.apply(this, arguments);
@@ -874,7 +854,9 @@
 
             window.__originalAddEventListener = window.addEventListener;
             window.addEventListener = function() {
-                if (arguments[0] !== 'load') { // is this ok???
+                // if event is not related to 'load' event
+                // see: https://developer.mozilla.org/en-US/docs/Web/Events
+                if (!['load', 'unload', 'beforeunload'].includes(arguments[0])) {
                     window.__PROBE__.addEventToMap(this, arguments[0]);
                 }
                 window.__originalAddEventListener.apply(this, arguments);
@@ -883,7 +865,7 @@
             XMLHttpRequest.prototype.__originalOpen = XMLHttpRequest.prototype.open;
             XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
 
-                var _url = window.__PROBE__.removeUrlParameter(url, '_');
+                let _url = window.__PROBE__.removeUrlParameter(url, '_');
                 this.__request = new Request('xhr', method, _url);
 
                 // adding XHR listener
@@ -907,7 +889,7 @@
                     window.__PROBE__.eventLoopManager.inErrorXHR(this);
                 });
 
-                this.timeout = window.__PROBE_CONSTANTS__.XHRTimeout;
+                this.timeout = XHRTimeout;
 
                 return this.__originalOpen(method, url, async, user, password);
             };
@@ -917,15 +899,15 @@
                 this.__request.data = data;
                 this.__request.triggerer = window.__PROBE__.getLastTriggerPageEvent();
 
-                var absurl = window.__PROBE__.getAbsoluteUrl(this.__request.url);
-                for (var a = 0; a < excludedUrls.length; a++) {
-                    if (absurl.match(excludedUrls[a])) {
+                let absoluteUrl = window.__PROBE__.getAbsoluteUrl(this.__request.url);
+                excludedUrls.forEach((url) => {
+                    if (absoluteUrl.match(url)) {
                         this.__skipped = true;
                     }
-                }
+                });
 
                 // check if request has already been sent
-                var requestKey = this.__request.key;
+                let requestKey = this.__request.key;
                 if (window.__PROBE__.sentXHRs.indexOf(requestKey) !== -1) {
                     return;
                 }
@@ -995,10 +977,10 @@
             };
 
             // create an observer instance for DOM changes
-            var observer = new WebKitMutationObserver(function(mutations) {
+            let observer = new WebKitMutationObserver(function(mutations) {
                 window.__PROBE__.eventLoopManager.nodeMutated(mutations);
             });
-            var eventAttributeList = ['src', 'href'];
+            let eventAttributeList = ['src', 'href'];
             window.__PROBE_CONSTANTS__.mappableEvents.forEach(function(event) {
                 eventAttributeList.push('on' + event);
             });
@@ -1015,7 +997,7 @@
 
         if (!window.__PROBE_CONSTANTS__) {
             // DEBUG:
-            console.log('setting the probe');
+            console.debug('setting the probe');
 
             // adding constants to page
             window.__PROBE_CONSTANTS__ = constants;
@@ -1028,7 +1010,7 @@
             window.__PROBE__ = probe;
 
             document.addEventListener('DOMContentLoaded', () => {
-                _initializeProbeHook(options.excludedUrls, options.overrideTimeoutFunctions);
+                _initializeProbeHook(options.excludedUrls, options.overrideTimeoutFunctions, constants.XHRTimeout);
             });
         }
     };

@@ -8,6 +8,7 @@
  * - return cookies before/after starting analysis
  * - asserting content type before launching analysis
  * - block navigation away
+ * - return content related to "navigationRequest" as in PhantomJS
  */
 
 (function() {
@@ -104,7 +105,7 @@
         // set function to request end from probe
         page.exposeFunction('__PROBE_FN_REQUEST_END__', () => {
             logger.info('Probe finished, closing the browser.');
-            browser.close();
+            // browser.close();
         });
 
         Promise.all([
