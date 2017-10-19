@@ -1003,7 +1003,7 @@
                 eventAttributeList.push('on' + event);
             });
             // observing for any change on document and its children
-            observer.observe(document.documentElement, {
+            observer.observe(window.document.documentElement, {
                 childList: true,
                 attributes: true,
                 characterData: false,
@@ -1016,6 +1016,7 @@
         if (!window.__PROBE_CONSTANTS__) {
             // DEBUG:
             console.log('setting the probe');
+
             // adding constants to page
             window.__PROBE_CONSTANTS__ = constants;
 
@@ -1026,7 +1027,9 @@
 
             window.__PROBE__ = probe;
 
-            _initializeProbeHook(options.excludedUrls, options.overrideTimeoutFunctions);
+            document.addEventListener('DOMContentLoaded', () => {
+                _initializeProbeHook(options.excludedUrls, options.overrideTimeoutFunctions);
+            });
         }
     };
 
