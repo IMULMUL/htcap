@@ -8,8 +8,6 @@
  version.
  */
 
-// TODO: stop using console.log() to transmit data to crawler thread
-
 // var system = require('system');
 // var fs = require('fs');
 var page = require('webpage')
@@ -25,13 +23,13 @@ window.page = page;
 // phantom.injectJs('probe.js');
 
 
-window.startTime = Date.now();
+// window.startTime = Date.now();
 
 window.response = null;
 
 // var headers = {};
 
-// var page_settings = {encoding: 'utf8'};
+var page_settings;// = {encoding: 'utf8'};
 // var random = 'IsHOulDb34RaNd0MsTR1ngbUt1mN0t';
 
 // var args = [];//getopt(system.args, 'A:R:x:ftX:HOPD:c:p:r:');
@@ -49,7 +47,7 @@ window.response = null;
 //     options.maxExecTime = parseInt(arg[1]) * 1000;
 //     break;
 //
-// case 'f': // -f do NOT fill values in forms
+// case 'f': // -f do NOT fill values in forms
 //     options.fillValues = false;
 //     break;
 // case 't': // -t do NOT trigger events (onload only)
@@ -91,7 +89,7 @@ window.response = null;
 //     }
 // });
 
-// var site = args.args[1];
+var site; // = args.args[1];
 //
 // if (site.length < 4 || site.substring(0, 4)
 //         .toLowerCase() !== 'http') {
@@ -137,9 +135,9 @@ page.onResourceReceived = function(resource) {
 };
 
 
-page.onResourceRequested = function(requestData, networkRequest) {
-    //console.log(JSON.stringify(requestData))
-};
+// page.onResourceRequested = function(requestData, networkRequest) {
+//     //console.log(JSON.stringify(requestData))
+// };
 
 // to detect window.location= / document.location.href=
 page.onNavigationRequested = function(url, type) {
@@ -195,24 +193,24 @@ page.onNavigationRequested = function(url, type) {
 // };
 
 
-page.onCallback = function(data) {
-    switch (data.cmd) {
-        case 'print':
-            console.log(data.argument);
-            break;
+// page.onCallback = function(data) {
+//     switch (data.cmd) {
+//         case 'print':
+//             console.log(data.argument);
+//             break;
+//
+//         case 'end':
+//             page.evaluate(function() {
+//                 window.__PROBE__.printRequests();
+//             });
+//
+//             printStatus('ok');
+//             phantom.exit(0);
+//             break;
+//     }
+// };
 
-        case 'end':
-            page.evaluate(function() {
-                window.__PROBE__.printRequests();
-            });
-
-            printStatus('ok', window.response.contentType);
-            phantom.exit(0);
-            break;
-    }
-};
-
-
+var options, headers;
 // if (options.httpAuth) {
 //     headers['Authorization'] = 'Basic ' + btoa(options.httpAuth[0] + ':' + options.httpAuth[1]);
 // }
@@ -244,12 +242,11 @@ if (options.referer) {
 //     height: 1080,
 // };
 
-
 page.open(site, page_settings, function(status) {
     var response = window.response; // just to be clear
     if (status !== 'success') {
-        var mess = '';
-        var out = {response: response};
+        // var mess = '';
+        // var out = {response: response};
         if (!response || response.headers.length === 0) {
             printStatus('error', 'load');
             phantom.exit(1);
@@ -276,12 +273,77 @@ page.open(site, page_settings, function(status) {
     assertContentTypeHtml(response);
 
     page.evaluate(function() {
-        console.log('startAnalysis');
+        // console.log('startAnalysis');
         // starting page analysis
-        console.log('page initialized ');
+        // console.log('page initialized ');
 
         window.__PROBE__.startAnalysis();
     });
 
 
 });
+
+function compareUrls(url1, url2, includeHash) {
+    var a1 = document.createElement('a');
+    var a2 = document.createElement('a');
+    a1.href = url1;
+    a2.href = url2;
+
+    var eq = (a1.protocol === a2.protocol && a1.host === a2.host && a1.pathname === a2.pathname && a1.search === a2.search);
+
+    if (includeHash) {
+        eq = eq && a1.hash === a2.hash;
+    }
+
+    return eq;
+}
+
+
+function printCookies() {
+    console.log('["cookies",' + JSON.stringify(phantom.cookies) + '],');
+}
+
+
+function printStatus(status, errcode, message, redirect) {
+    var o = {status: status};
+    if (status === 'error') {
+        o.code = errcode;
+        switch (errcode) {
+            case 'load':
+                break;
+            case 'contentType':
+                o.message = message;
+                break;
+            case 'requestTimeout':
+                break;
+            case 'probe_timeout':
+                break;
+        }
+    }
+    if (redirect) {
+        o.redirect = redirect;
+    }
+    // o.time = Math.floor((Date.now() - window.startTime) / 1000);
+    console.log(JSON.stringify(o));
+    console.log(']');
+}
+
+
+function execTimedOut() {
+    if (!response || response.headers.length === 0) {
+        printStatus('error', 'requestTimeout');
+        phantom.exit(0);
+    }
+    printStatus('error', 'probe_timeout');
+    phantom.exit(0);
+
+}
+
+
+function assertContentTypeHtml(response) {
+    if (response.contentType.toLowerCase()
+            .split(';')[0] !== 'text/html') {
+        printStatus('error', 'contentType', 'content type is ' + response.contentType); // escape response.contentType???
+        phantom.exit(0);
+    }
+}

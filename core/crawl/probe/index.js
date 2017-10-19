@@ -1,9 +1,13 @@
 /**
  * @todo:
  * - make possible to send POST request and custom headers on page.goto() see: https://github.com/GoogleChrome/puppeteer/issues/1062
- * - return error on failed resources (like in `printStatus()`)
- * - return the cookies before/after starting analysis
- * -
+ * - set a referer if any provided
+ * - return error on failed resources (like in `printStatus()`), error type supported:
+ *     requestTimeout, invalidContentType, pageCrash, probeException, failedStatus (40x, 50x) …
+ * - return redirect
+ * - return cookies before/after starting analysis
+ * - asserting content type before launching analysis
+ * - block navigation away
  */
 
 (function() {
@@ -22,6 +26,8 @@
 
     // handling SIGINT signal
     process.on('SIGINT', () => {
+        // TODO: send found content
+        // TODO: close the browser
         process.exit();
     });
 
@@ -81,9 +87,9 @@
             logger.info(`requestfailed: ${failedRequest.url}`);
         });
         //DEBUG:
-        page.on('requestfinished', finishedRequest => {
-            // logger.info(`requestfinished: ${finishedRequest.url}`);
-        });
+        // page.on('requestfinished', finishedRequest => {
+        // logger.info(`requestfinished: ${finishedRequest.url}`);
+        // });
         //DEBUG:
         page.on('load', () => {
             logger.debug('load done');
@@ -126,15 +132,6 @@
                                 window.__PROBE__.startAnalysis();
                             });
 
-
-                            // page.screenshot({path: '/home/guillaume/Downloads/probe.png'})
-                            //     .then(() => {
-                            //         page.evaluate(() => {
-                            //             console.info(window.__PROBE_CONSTANTS__.messageEvent.eventLoopReady.from);
-                            //             console.info(document.documentElement.innerText);
-                            //         });
-                            //         browser.close();
-                            //     });
                         });
                 },
                 (error) => {
