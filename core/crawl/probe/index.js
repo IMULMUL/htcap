@@ -3,9 +3,7 @@
  * - return error on failed resources (like in `printStatus()`), error type supported:
  *     requestTimeout, invalidContentType, pageCrash, probeException, failedStatus (40x, 50x) …
  * - return redirect
- * - asserting content type before launching analysis
  * - closing the probe nicely (ie. return finding on SIGINT)
- *
  *
  * @todo (blocked):
  * - make possible to send POST request and custom headers on page.goto() see: https://github.com/GoogleChrome/puppeteer/issues/1062
@@ -35,9 +33,7 @@
 
     // handling SIGINT signal
     process.on('SIGINT', () => {
-        // TODO: send found content
-        // TODO: close the browser
-        process.exit(0);
+        _finishJob();
     });
 
     // DEBUG:
@@ -55,11 +51,25 @@
             });
     }
 
-    function run([browser, page]) {
+    function _finishJob(errorCode) {
+
+        if (browser) {
+            browser.close()
+                .then(() => {
+                    process.exit(errorCode);
+                });
+        } else {
+            process.exit(errorCode);
+        }
+    }
+
+    function run([newBrowser, page]) {
+
+        browser = newBrowser;
 
         page.on('request', interceptedRequest => {
             //DEBUG:
-            // logger.info(`intercepted request: ${interceptedRequest.resourceType} ${interceptedRequest.url}`);
+            logger.info(`intercepted request: ${interceptedRequest.resourceType} ${interceptedRequest.url}`);
 
             // block image loading
             if (interceptedRequest.resourceType === 'image') {
@@ -80,7 +90,7 @@
 
         page.on('error', error => {
             logger.log('warn', `Page crash: "${error.code}", "${error.message()}"`);
-            process.exit(1);
+            _finishJob(1);
         });
 
         //DEBUG:
@@ -96,13 +106,13 @@
             logger.info(`requestfailed: ${failedRequest.url}`);
         });
         //DEBUG:
-        // page.on('requestfinished', finishedRequest => {
-        // logger.info(`requestfinished: ${finishedRequest.url}`);
-        // });
-        //DEBUG:
-        page.on('load', () => {
-            logger.debug('load done');
+        page.on('requestfinished', finishedRequest => {
+            logger.info(`requestfinished: ${finishedRequest.response().ok} ${finishedRequest.response().status}, ${finishedRequest.method} ${finishedRequest.url}`);
         });
+        //DEBUG:
+        // page.on('load', () => {
+        //     logger.debug('load done');
+        // });
 
 
         // set function to return value from probe
@@ -113,44 +123,60 @@
         // set function to request end from probe
         page.exposeFunction('__PROBE_FN_REQUEST_END__', () => {
             logger.info('Probe finished, closing the browser.');
-            browser.close();
+            _finishJob();
         });
 
-        Promise.all([
-            page.setUserAgent(options.userAgent),
-            page.setCookie(...options.cookies),
-            page.setViewport(constants.viewport),
-            page.setRequestInterceptionEnabled(true),
-            page.authenticate(options.httpAuth),
-        ])
+        Promise
+            .all([
+                page.setUserAgent(options.userAgent),
+                page.setCookie(...options.cookies),
+                page.setViewport(constants.viewport),
+                page.setRequestInterceptionEnabled(true),
+                page.authenticate(options.httpAuth),
+            ])
             .then(
                 () => {
-
                     let inputValues = utils.generateRandomValues(options.random);
 
                     // initializing the probe into the page context
                     page.evaluateOnNewDocument(setProbe, ...[options, inputValues, constants]);
 
                     page.goto(options.startUrl.href, {waitUntil: 'networkidle'})
-                        .then(() => {
+                        .then(
+                            response => {
+                                if (response.ok) {
+                                    if (response.headers['content-type'].toLowerCase()
+                                            .includes('text/html')) {
 
-                            page.cookies()
-                                .then(cookies => {
-                                    logger.info('["cookies",' + JSON.stringify(cookies) + '],');
-                                });
+                                        page.cookies()
+                                            .then(cookies => {
+                                                logger.info('["cookies",' + JSON.stringify(cookies) + '],');
+                                            });
 
-                            // DEBUG:
-                            logger.info('starting the probe');
+                                        // DEBUG:
+                                        logger.info('starting the probe');
 
-                            page.evaluate(() => {
-                                window.__PROBE__.startAnalysis();
-                            });
-
-                        });
+                                        page.evaluate(() => {
+                                            window.__PROBE__.startAnalysis();
+                                        });
+                                    } else {
+                                        logger.info(`{"status":"error","code":"contentType","message":"content type is ${response.headers['content-type']}"}`);
+                                        _finishJob();
+                                    }
+                                } else {
+                                    //DEBUG:
+                                    logger.debug(response);
+                                }
+                            },
+                            (error) => {
+                                logger.error(error);
+                                _finishJob(1);
+                            },
+                        );
                 },
                 (error) => {
                     logger.error(error);
-                    process.exit(1);
+                    _finishJob(1);
                 });
     }
 
