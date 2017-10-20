@@ -3,7 +3,6 @@
  * - return error on failed resources (like in `printStatus()`), error type supported:
  *     requestTimeout, invalidContentType, pageCrash, probeException, failedStatus (40x, 50x) …
  * - return redirect
- * - return cookies before/after starting analysis
  * - asserting content type before launching analysis
  * - closing the probe nicely (ie. return finding on SIGINT)
  *
@@ -16,6 +15,7 @@
  *
  * @todo (nice to have):
  * - add a debug level
+ * - return cookies for every request
  */
 
 (function() {
@@ -30,7 +30,8 @@
     const utils = require('./src/utils');
     const setProbe = require('./src/probe').setProbe;
 
-    let options = utils.getOptionsFromArgs();
+    let options = utils.getOptionsFromArgs(),
+        browser;
 
     // handling SIGINT signal
     process.on('SIGINT', () => {
@@ -132,6 +133,11 @@
 
                     page.goto(options.startUrl.href, {waitUntil: 'networkidle'})
                         .then(() => {
+
+                            page.cookies()
+                                .then(cookies => {
+                                    logger.info('["cookies",' + JSON.stringify(cookies) + '],');
+                                });
 
                             // DEBUG:
                             logger.info('starting the probe');
