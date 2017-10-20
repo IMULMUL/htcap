@@ -124,7 +124,7 @@
 
                 } else if (this._DOMAssessmentQueue.length > 0) { // if there is DOMAssessment waiting
 
-                    var element = this._DOMAssessmentQueue.shift();
+                    let element = this._DOMAssessmentQueue.shift();
                     // DEBUG:
                     // console.debug('eventLoop analyzeDOM: ' + _elementToString(element));
 
@@ -134,7 +134,7 @@
 
                 } else if (this._toBeTriggeredEventsQueue.length > 0) { // if there is event waiting
                     // retrieving the next pageEvent
-                    var pageEvent = this._toBeTriggeredEventsQueue.pop();
+                    let pageEvent = this._toBeTriggeredEventsQueue.pop();
 
                     // setting the current element
                     this._probe._currentPageEvent = pageEvent;
@@ -168,8 +168,8 @@
                 // console.debug('eventLoop nodesMutated:', mutations.length);
                 mutations.forEach(function(mutationRecord) {
                     if (mutationRecord.type === 'childList') {
-                        for (var i = 0; i < mutationRecord.addedNodes.length; i++) {
-                            var addedNode = mutationRecord.addedNodes[i];
+                        for (let i = 0; i < mutationRecord.addedNodes.length; i++) {
+                            let addedNode = mutationRecord.addedNodes[i];
                             // DEBUG:
                             // console.debug('added:', _elementToString(mutationRecord.addedNodes[i]), mutationRecord.addedNodes[i]);
 
@@ -181,7 +181,7 @@
                             }
                         }
                     } else if (mutationRecord.type === 'attributes') {
-                        var element = mutationRecord.target;
+                        let element = mutationRecord.target;
                         // DEBUG:
                         // console.debug('eventLoop nodeMutated: attributes', _elementToString(element), mutationRecord.attributeName);
                         this._probe._triggeredPageEvents.forEach(function(pageEvent, index) {
@@ -190,7 +190,6 @@
                             }
                         }.bind(this));
                         this.scheduleDOMAssessment(element);
-
                     }
                 }.bind(this));
             }
@@ -217,7 +216,7 @@
                     // console.debug('eventLoop doneXHR');
 
                     // if the request is in the sentXHR queue
-                    var i = this._sentXHRQueue.indexOf(request);
+                    let i = this._sentXHRQueue.indexOf(request);
                     if (i >= 0) {
                         this._sentXHRQueue.splice(i, 1);
                     }
@@ -269,7 +268,7 @@
              * @returns {{type: *, method: *, url: *, data: null}}
              */
             toJSON() {
-                var obj = {
+                let obj = {
                     type: this.type,
                     method: this.method,
                     url: this.url,
@@ -318,11 +317,11 @@
                 // console.debug('PageEvent triggering events for : ', _elementToString(this.element), this.eventName);
 
                 if ('createEvent' in document) {
-                    var evt = document.createEvent('HTMLEvents');
+                    let evt = document.createEvent('HTMLEvents');
                     evt.initEvent(this.eventName, true, false);
                     this.element.dispatchEvent(evt);
                 } else {
-                    var eventName = 'on' + this.eventName;
+                    let eventName = 'on' + this.eventName;
                     if (eventName in this.element && typeof this.element[eventName] === 'function') {
                         this.element[eventName]();
                     }
@@ -355,7 +354,7 @@
 
 
             addToRequestToPrint(request) {
-                var requestKey = request.key;
+                let requestKey = request.key;
                 if (this.requestToPrint.indexOf(requestKey) < 0) {
                     this.requestToPrint.push(requestKey);
                 }
@@ -370,21 +369,21 @@
             printJSONP(node) {
 
                 if (node.nodeName.toLowerCase() === 'script' && node.hasAttribute('src')) {
-                    var a = document.createElement('a'),
+                    let a = document.createElement('a'),
                         src = node.getAttribute('src');
 
                     a.href = src;
 
                     // JSONP must have a querystring...
                     if (a.search) {
-                        var req = new Request('jsonp', 'GET', src, null, this.getLastTriggerPageEvent());
+                        let req = new Request('jsonp', 'GET', src, null, this.getLastTriggerPageEvent());
                         this.addToRequestToPrint(req);
                     }
                 }
             }
 
             printLink(url) {
-                var req;
+                let req;
 
                 url = url.split('#')[0];
 
@@ -398,7 +397,7 @@
             }
 
             printWebsocket(url) {
-                var req = new Request('websocket', 'GET', url, null, this.getLastTriggerPageEvent());
+                let req = new Request('websocket', 'GET', url, null, this.getLastTriggerPageEvent());
                 this.addToRequestToPrint(req);
             }
 
@@ -424,7 +423,7 @@
              * @returns {Request}
              */
             getFormAsRequest(form) {
-                var par, req,
+                let par, req,
                     formObj = {};
 
                 formObj.method = form.getAttribute('method');
@@ -439,8 +438,8 @@
                     formObj.url = document.location.href;
                 }
                 formObj.data = [];
-                var inputs = form.querySelectorAll('input, select, textarea');
-                for (var a = 0; a < inputs.length; a++) {
+                let inputs = form.querySelectorAll('input, select, textarea');
+                for (let a = 0; a < inputs.length; a++) {
                     if (!inputs[a].name) {
                         continue;
                     }
@@ -469,7 +468,7 @@
                 formObj.data = formObj.data.join('&');
 
                 if (formObj.method === 'GET') {
-                    var url = _replaceUrlQuery(formObj.url, formObj.data);
+                    let url = _replaceUrlQuery(formObj.url, formObj.data);
                     req = new Request('form', 'GET', url);
                 } else {
                     req = new Request('form', 'POST', formObj.url, formObj.data);
@@ -485,7 +484,7 @@
              */
             addEventToMap(element, eventName) {
 
-                for (var a = 0; a < this._eventsMap.length; a++) {
+                for (let a = 0; a < this._eventsMap.length; a++) {
                     if (this._eventsMap[a].element === element) {
                         this._eventsMap[a].events.push(eventName);
                         return;
@@ -504,9 +503,9 @@
             startAnalysis() {
 
                 // Parsing the current DOM
-                var elements = document.getElementsByTagName('*');
-                for (var i = 0; i < elements.length; i++) {
-                    var element = elements[i];
+                let elements = document.getElementsByTagName('*');
+                for (let i = 0; i < elements.length; i++) {
+                    let element = elements[i];
                     if (element.nodeType === Node.ELEMENT_NODE) {
                         this.eventLoopManager.scheduleDOMAssessment(element);
                     }
@@ -517,13 +516,13 @@
             }
 
             removeUrlParameter(url, par) {
-                var anchor = document.createElement('a');
+                let anchor = document.createElement('a');
                 anchor.href = url;
 
-                var pars = anchor.search.substr(1)
+                let pars = anchor.search.substr(1)
                     .split(/(?:&amp;|&)+/);
 
-                for (var a = pars.length - 1; a >= 0; a--) {
+                for (let a = pars.length - 1; a >= 0; a--) {
                     if (pars[a].split('=')[0] === par) {
                         pars.splice(a, 1);
                     }
@@ -533,23 +532,22 @@
             }
 
             getAbsoluteUrl(url) {
-                var anchor = document.createElement('a');
+                let anchor = document.createElement('a');
                 anchor.href = url;
                 return anchor.href;
             }
 
             /**
-             * returns true if the value has been set
-             * @param {Element} el
+             * @param {Element} element
              * @private
              */
-            _setVal(el) {
-                var _this = this;
+            _setVal(element) {
+                let _this = this;
 
-                var setv = function(name) {
-                    var ret = _this.getRandomValue('string');
+                const setv = function(name) {
+                    let ret = _this.getRandomValue('string');
                     window.__PROBE_CONSTANTS__.inputNameMatchValue.forEach(function(matchValue) {
-                        var regexp = new RegExp(matchValue.name, 'gi');
+                        let regexp = new RegExp(matchValue.name, 'gi');
                         if (name.match(regexp)) {
                             ret = _this.getRandomValue(matchValue.value);
                         }
@@ -557,32 +555,33 @@
                     return ret;
                 };
 
-                // needed for example by angularjs
-                var triggerChange = function() {
+                // needed by angularjs and other single page app code
+                const triggerChange = function() {
                     // update angular model
-                    _this._trigger(new PageEvent(el, 'input'));
+                    _this._trigger(new PageEvent(element, 'input'));
 
-                    // _this._trigger(new PageEvent(el, 'blur'));
-                    // _this._trigger(new PageEvent(el, 'keyup'));
-                    // _this._trigger(new PageEvent(el, 'keydown'));
+                    // _this._trigger(new PageEvent(element, 'blur'));
+                    // _this._trigger(new PageEvent(element, 'keyup'));
+                    // _this._trigger(new PageEvent(element, 'keydown'));
                 };
 
-                if (el.tagName.toLowerCase() === 'textarea') {
-                    el.value = setv(el.name);
+                if (element.tagName.toLowerCase() === 'textarea') {
+                    element.value = setv(element.name);
                     triggerChange();
 
-                } else if (el.tagName.toLowerCase() === 'select') {
-                    var opts = el.getElementsByTagName('option');
+                } else if (element.tagName.toLowerCase() === 'select') {
+                    let opts = element.getElementsByTagName('option');
                     if (opts.length > 1) { // avoid to set the first (already selected) options
                         // @TODO .. qui seleziono l'ultimo val.. ma devo controllare che non fosse "selected"
-                        el.value = opts[opts.length - 1].value;
+                        //TODO: .. here I select the last value.. but I have to check that it was not "selected"
+                        element.value = opts[opts.length - 1].value;
                     } else {
-                        el.value = setv(el.name);
+                        element.value = setv(element.name);
                     }
                     triggerChange();
 
-                } else if (el.tagName.toLowerCase() === 'input') {
-                    var type = el.type.toLowerCase();
+                } else if (element.tagName.toLowerCase() === 'input') {
+                    let type = element.type.toLowerCase();
 
                     switch (type) {
                         case 'button':
@@ -593,18 +592,18 @@
                         case '':
                         case 'text':
                         case 'search':
-                            el.value = setv(el.name);
+                            element.value = setv(element.name);
                             break;
                         case 'radio':
                         case 'checkbox':
-                            el.setAttribute('checked', !(el.getAttribute('checked')));
+                            element.setAttribute('checked', !(element.getAttribute('checked')));
                             break;
                         case 'range':
                         case 'number':
-                            if ('min' in el && el.min) {
-                                el.value = (parseInt(el.min) + parseInt(('step' in el) ? el.step : 1));
+                            if ('min' in element && element.min) {
+                                element.value = (parseInt(element.min) + parseInt(('step' in element) ? element.step : 1));
                             } else {
-                                el.value = parseInt(this.getRandomValue('number'));
+                                element.value = parseInt(this.getRandomValue('number'));
                             }
                             break;
                         case 'password':
@@ -616,10 +615,10 @@
                         case 'url':
                         case 'week':
                         case 'tel':
-                            el.value = this.getRandomValue(type);
+                            element.value = this.getRandomValue(type);
                             break;
                         case 'datetime-local':
-                            el.value = this.getRandomValue('datetimeLocal');
+                            element.value = this.getRandomValue('datetimeLocal');
                             break;
                         default:
                             return;
@@ -656,17 +655,17 @@
              * @private
              */
             _getEventsForElement(element) {
-                var events = [];
+                let events = [],
+                    map = this._eventsMap;
 
-                var map = this._eventsMap;
-                for (var a = 0; a < map.length; a++) {
+                for (let a = 0; a < map.length; a++) {
                     if (map[a].element === element) {
                         events = map[a].events.slice();
                         break;
                     }
                 }
 
-                for (var selector in window.__PROBE_CONSTANTS__.triggerableEvents) {
+                for (let selector in window.__PROBE_CONSTANTS__.triggerableEvents) {
                     if (element.webkitMatchesSelector(selector)) {
                         events = events.concat(window.__PROBE_CONSTANTS__.triggerableEvents[selector]);
                     }
@@ -681,10 +680,10 @@
              * @private
              */
             _triggerElementEvents(element) {
-                var events = this._getEventsForElement(element);
+                let events = this._getEventsForElement(element);
 
-                events.forEach(function(eventName) {
-                    var pageEvent = new PageEvent(element, eventName);
+                events.forEach(eventName => {
+                    let pageEvent = new PageEvent(element, eventName);
                     // DEBUG:
                     // console.debug('triggering events for : ' + _elementToString(element) + ' ' + eventName);
 
@@ -692,7 +691,7 @@
                         this._triggeredPageEvents.push(pageEvent);
                         this._trigger(pageEvent);
                     }
-                }.bind(this));
+                });
             }
 
             /**
@@ -700,13 +699,13 @@
              * @private
              */
             _mapElementEvents(element) {
-                window.__PROBE_CONSTANTS__.mappableEvents.forEach(function(eventName) {
-                    var onEventName = 'on' + eventName;
+                window.__PROBE_CONSTANTS__.mappableEvents.forEach(eventName => {
+                    let onEventName = 'on' + eventName;
 
                     if (onEventName in element && element[onEventName]) {
                         this.addEventToMap(element, eventName);
                     }
-                }.bind(this));
+                });
             }
 
             /**
@@ -743,8 +742,8 @@
 
                 if (this._options.fillValues) {
                     // Parsing the current element and set values for each element within
-                    var elements = element.getElementsByTagName('*');
-                    for (var i = 0; i < elements.length; i++) {
+                    let elements = element.getElementsByTagName('*');
+                    for (let i = 0; i < elements.length; i++) {
                         this._setVal(elements[i]);
                     }
                 }
@@ -766,33 +765,38 @@
          * @static
          */
         function _elementToString(element) {
-            if (!element) {
-                return '[]';
-            }
-            var tagName = (element === document ? 'DOCUMENT' : (element === window ? 'WINDOW' : element.tagName));
-            var text = undefined;
-            if (element.textContent) {
-                text = element.textContent.trim()
-                    .replace(/\s/, ' ')
-                    .substring(0, 10);
-                if (text.indexOf(' ') > -1) {
-                    text = '\'' + text + '\'';
+            let str = '[]';
+
+            if (element) {
+
+                let tagName = (element === document ? 'DOCUMENT' : (element === window ? 'WINDOW' : element.tagName)),
+                    text = undefined,
+                    className = element.className ? (element.className.indexOf(' ') !== -1 ? '\'' + element.className + '\'' : element.className) : '';
+
+                if (element.textContent) {
+                    text = element.textContent.trim()
+                        .replace(/\s/, ' ')
+                        .substring(0, 10);
+
+                    if (text.includes(' ')) {
+                        text = '\'' + text + '\'';
+                    }
                 }
+
+
+                str = '[' +
+                    (tagName ? tagName + ' ' : '') +
+                    (element.name && typeof element.name === 'string' ? element.name + ' ' : '') +
+                    (className ? '.' + className + ' ' : '') +
+                    (element.id ? '#' + element.id + ' ' : '') +
+                    (element.src ? 'src=' + element.src + ' ' : '') +
+                    (element.action ? 'action=' + element.action + ' ' : '') +
+                    (element.method ? 'method=' + element.method + ' ' : '') +
+                    (element.value ? 'v=' + element.value + ' ' : '') +
+                    (text ? 'txt=' + text : '') +
+                    ']';
             }
-
-            var className = element.className ? (element.className.indexOf(' ') !== -1 ? '\'' + element.className + '\'' : element.className) : '';
-
-            return '[' +
-                (tagName ? tagName + ' ' : '') +
-                (element.name && typeof element.name === 'string' ? element.name + ' ' : '') +
-                (className ? '.' + className + ' ' : '') +
-                (element.id ? '#' + element.id + ' ' : '') +
-                (element.src ? 'src=' + element.src + ' ' : '') +
-                (element.action ? 'action=' + element.action + ' ' : '') +
-                (element.method ? 'method=' + element.method + ' ' : '') +
-                (element.value ? 'v=' + element.value + ' ' : '') +
-                (text ? 'txt=' + text : '') +
-                ']';
+            return str;
         }
 
         /**
@@ -825,7 +829,7 @@
         }
 
         function _replaceUrlQuery(url, qs) {
-            var anchor = document.createElement('a');
+            let anchor = document.createElement('a');
             anchor.href = url;
             /*
              Example of content:
@@ -1009,6 +1013,7 @@
 
             window.__PROBE__ = probe;
 
+            // initialize the hook once the DOM content is fully loaded
             document.addEventListener('DOMContentLoaded', () => {
                 _initializeProbeHook(options.excludedUrls, options.overrideTimeoutFunctions, constants.XHRTimeout);
             });

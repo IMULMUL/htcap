@@ -1,4 +1,4 @@
-(function () {
+(function() {
     'use strict';
 
     const fs = require('fs'),
@@ -8,7 +8,7 @@
     const ArgsParse = require('../node_modules/argparse').ArgumentParser;
 
 
-    exports.getOptionsFromArgs = function () {
+    exports.getOptionsFromArgs = function() {
 
         let argumentParser = new ArgsParse();
 
@@ -190,8 +190,8 @@
      * @return {{}}
      * @private
      */
-    exports.generateRandomValues = function (seed) {
-        var values = {},
+    exports.generateRandomValues = function(seed) {
+        let values = {},
             letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
             numbers = '0123456789',
             symbols = '!#&^;.,?%$*',
@@ -201,86 +201,84 @@
             surnames = ['anderson', 'thomas', 'jackson', 'white', 'harris', 'martin', 'thompson', 'garcia', 'martinez', 'robinson', 'clark', 'rodriguez', 'lewis', 'lee', 'walker', 'hall'],
             domains = ['.com', '.org', '.net', '.it', '.tv', '.de', '.fr'];
 
-        var randoms = [],
+        let randoms = [],
             randoms_i = 0;
 
-        for (var a = 0; a < seed.length; a++) {
-            var i = seed[a].charCodeAt(0);
-            randoms.push(i);
+        for (let a = 0; a < seed.length; a++) {
+            randoms.push(seed[a].charCodeAt(0));
         }
 
-        var rand = function (max) {
-            var i = randoms[randoms_i] % max;
+        const rand = function(max) {
+            let i = randoms[randoms_i] % max;
             randoms_i = (randoms_i + 1) % randoms.length;
             return i;
         };
 
-        var randarr = function (arr, len) {
-            var r;
-            var ret = '';
-            for (var a = 0; a < len; a++) {
+        const randomizeArray = function(arr, len) {
+            let r, ret = '';
+            for (let a = 0; a < len; a++) {
                 r = rand(arr.length - 1);
                 ret += arr[r];
             }
             return ret;
         };
 
-        var generators = {
-            string: function () {
-                return randarr(letters, 8);
+        let generators = {
+            string: function() {
+                return randomizeArray(letters, 8);
             },
-            number: function () {
-                return randarr(numbers, 3);
+            number: function() {
+                return randomizeArray(numbers, 3);
             },
-            month: function () {
-                return randarr(months, 1);
+            month: function() {
+                return randomizeArray(months, 1);
             },
-            year: function () {
-                return randarr(years, 1);
+            year: function() {
+                return randomizeArray(years, 1);
             },
-            date: function () {
+            date: function() {
                 return generators.year() + '-' + generators.month() + '-' + generators.month();
             },
-            color: function () {
-                return '#' + randarr(numbers, 6);
+            color: function() {
+                return '#' + randomizeArray(numbers, 6);
             },
-            week: function () {
-                return generators.year() + '-W' + randarr(months.slice(0, 6), 1);
+            week: function() {
+                return generators.year() + '-W' + randomizeArray(months.slice(0, 6), 1);
             },
-            time: function () {
+            time: function() {
                 return generators.month() + ':' + generators.month();
             },
-            datetimeLocal: function () {
+            datetimeLocal: function() {
                 return generators.date() + 'T' + generators.time();
             },
-            domain: function () {
-                return randarr(letters, 12)
-                    .toLowerCase() + randarr(domains, 1);
+            domain: function() {
+                return randomizeArray(letters, 12)
+                    .toLowerCase() + randomizeArray(domains, 1);
             },
-            email: function () {
-                return randarr(names, 1) + '.' + generators.surname() + '@' + generators.domain();
+            email: function() {
+                return randomizeArray(names, 1) + '.' + generators.surname() + '@' + generators.domain();
             },
-            url: function () {
+            url: function() {
                 return 'http://www.' + generators.domain();
             },
-            humandate: function () {
+            humandate: function() {
                 return generators.month() + '/' + generators.month() + '/' + generators.year();
             },
-            password: function () {
-                return randarr(letters, 3) + randarr(symbols, 1) + randarr(letters, 2) + randarr(numbers, 3) + randarr(symbols, 2);
+            password: function() {
+                return randomizeArray(letters, 3) + randomizeArray(symbols, 1) + randomizeArray(letters, 2) + randomizeArray(numbers, 3) + randomizeArray(symbols, 2);
             },
-            surname: function () {
-                return randarr(surnames, 1);
+            surname: function() {
+                return randomizeArray(surnames, 1);
             },
-            firstname: function () {
-                return randarr(names, 1);
+            firstname: function() {
+                return randomizeArray(names, 1);
             },
-            tel: function () {
-                return '+' + randarr(numbers, 1) + ' ' + randarr(numbers, 10);
+            tel: function() {
+                return '+' + randomizeArray(numbers, 1) + ' ' + randomizeArray(numbers, 10);
             },
         };
 
-        for (var type in generators) {
+        for (let type in generators) {
             values[type] = generators[type]();
         }
 
