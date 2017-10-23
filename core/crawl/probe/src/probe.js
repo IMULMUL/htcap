@@ -13,7 +13,7 @@
     'use strict';
 
 
-    exports.setProbe = function setProbe(options, inputValues, constants) {
+    exports.setProbe = function setProbe(options, constants) {
 
         /**
          * EventLoop Manager
@@ -335,10 +335,9 @@
         class Probe {
             /**
              * @param options
-             * @param inputValues
              * @constructor
              */
-            constructor(options, inputValues) {
+            constructor(options) {
                 this._options = options;
 
                 this.sentXHRs = [];
@@ -349,7 +348,6 @@
                 this._currentPageEvent = undefined;
                 this._eventsMap = [];
                 this._triggeredPageEvents = [];
-                this._inputValues = inputValues;
             }
 
 
@@ -402,11 +400,11 @@
             }
 
             getRandomValue(type) {
-                if (!(type in this._inputValues)) {
+                if (!(type in this._options.inputValues)) {
                     type = 'string';
                 }
 
-                return this._inputValues[type];
+                return this._options.inputValues[type];
             }
 
             /**
@@ -1006,7 +1004,7 @@
             // adding constants to page
             window.__PROBE_CONSTANTS__ = constants;
 
-            let probe = new Probe(options, inputValues);
+            let probe = new Probe(options);
 
             // listening for messageEvent to trigger waiting events
             window.addEventListener('message', probe.eventLoopManager.eventMessageHandler.bind(probe.eventLoopManager), true);

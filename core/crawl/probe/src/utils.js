@@ -4,7 +4,6 @@
     const fs = require('fs'),
         url = require('url');
 
-    const logger = require('../logger');
     const ArgsParse = require('../node_modules/argparse').ArgumentParser;
 
 
@@ -15,9 +14,8 @@
         _getArguments(argumentParser);
 
         let args = argumentParser.parseArgs();
-        let options = _getOptions(args);
 
-        return options;
+        return _getOptions(args);
     };
 
     function _getArguments(argumentParser) {
@@ -147,6 +145,8 @@
         options.excludedUrls = args.excludedUrls !== '' ? args.excludedUrls.split(',') : [];
         options.overrideTimeoutFunctions = args.overrideTimeoutFunctions;
 
+        options.inputValues = _generateRandomValues(options.random);
+
         if (args.cookieFilePath !== '') {
             let data = fs.readFileSync(args.cookieFilePath, 'utf8');
             options.cookies = JSON.parse(data);
@@ -190,7 +190,7 @@
      * @return {{}}
      * @private
      */
-    exports.generateRandomValues = function(seed) {
+    function _generateRandomValues(seed) {
         let values = {},
             letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
             numbers = '0123456789',

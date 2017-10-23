@@ -27,33 +27,21 @@
 
     const constants = require('./src/constants').constants;
     const utils = require('./src/utils');
-    const setProbe = require('./src/probe').setProbe;
+
+    const pageHandler = require('./src/page-handler');
 
     let options = utils.getOptionsFromArgs(),
-        browser;
+        browser,
+        handler;
 
     // handling SIGINT signal
     process.on('SIGINT', () => {
-        _finishJob();
+        _requestJobEnd();
     });
 
-    // DEBUG:
-    // logger.info(`Current directory: ${process.cwd()}`);
+    function _requestJobEnd(errorCode) {
 
-    function _getBrowserAndPage() {
-        return puppeteer.launch({
-            headless: false,
-        })
-            .then(createdBrowser => {
-                return createdBrowser.newPage()
-                    .then(createdPage => {
-                        return [createdBrowser, createdPage];
-                    });
-            });
-    }
-
-    function _finishJob(errorCode) {
-
+        logger.info('closing Node process');
         if (browser) {
             browser.close()
                 .then(() => {
@@ -68,120 +56,57 @@
 
         browser = newBrowser;
 
-        page.on('request', interceptedRequest => {
-            //DEBUG:
-            logger.info(`intercepted request: ${interceptedRequest.resourceType} ${interceptedRequest.url}`);
+        handler = new pageHandler.Handler(page, constants, options);
 
-            // block image loading
-            if (interceptedRequest.resourceType === 'image') {
-                interceptedRequest.abort();
-            } else {
-                interceptedRequest.continue();
-            }
+        handler.on('finished', _requestJobEnd);
+        handler.on('probe_message', (msg) => {
+            logger.info(msg);
         });
 
-        page.on('console', consoleMessage => {
-            logger.log('debug', `Page console message, type "${consoleMessage.type}": "${consoleMessage.text}"`);
-        });
+        handler.initialize()
+            .then(() => {
 
-        page.on('dialog', dialog => {
-            logger.log('debug', `Page dialog, type "${dialog.type}": "${dialog.message()}"`);
-            dialog.accept();
-        });
+                handler.setProbe();
 
-        page.on('error', error => {
-            logger.log('warn', `Page crash: "${error.code}", "${error.message()}"`);
-            _finishJob(1);
-        });
+                page.goto(options.startUrl.href, {waitUntil: 'networkidle'})
+                    .then(response => {
 
-        //DEBUG:
-        page.on('frameattached', frameTo => {
-            logger.info(`frameattached to ${frameTo.url()}`);
-        });
-        //DEBUG:
-        page.on('framenavigated', frameTo => {
-            logger.info(`framenavigated to ${frameTo.url()}`);
-        });
-        //DEBUG:
-        page.on('requestfailed', failedRequest => {
-            logger.info(`requestfailed: ${failedRequest.url}`);
-        });
-        //DEBUG:
-        page.on('requestfinished', finishedRequest => {
-            logger.info(`requestfinished: ${finishedRequest.response().ok} ${finishedRequest.response().status}, ${finishedRequest.method} ${finishedRequest.url}`);
-        });
-        //DEBUG:
-        // page.on('load', () => {
-        //     logger.debug('load done');
-        // });
+                            if (response.ok) {
+                                // checking if it's some HTML document
+                                if (response.headers['content-type']
+                                        .toLowerCase()
+                                        .includes('text/html')) {
 
-
-        // set function to return value from probe
-        page.exposeFunction('__PROBE_FN_RETURN_STRING__', (request) => {
-            logger.info(`Probe return: ${request}`);
-        });
-
-        // set function to request end from probe
-        page.exposeFunction('__PROBE_FN_REQUEST_END__', () => {
-            logger.info('Probe finished, closing the browser.');
-            _finishJob();
-        });
-
-        Promise
-            .all([
-                page.setUserAgent(options.userAgent),
-                page.setCookie(...options.cookies),
-                page.setViewport(constants.viewport),
-                page.setRequestInterceptionEnabled(true),
-                page.authenticate(options.httpAuth),
-            ])
-            .then(
-                () => {
-                    let inputValues = utils.generateRandomValues(options.random);
-
-                    // on every new document, initializing the probe into the page context
-                    page.evaluateOnNewDocument(setProbe, ...[options, inputValues, constants]);
-
-                    page.goto(options.startUrl.href, {waitUntil: 'networkidle'})
-                        .then(
-                            response => {
-                                if (response.ok) {
-                                    if (response.headers['content-type'].toLowerCase()
-                                            .includes('text/html')) {
-
-                                        page.cookies()
-                                            .then(cookies => {
-                                                logger.info('["cookies",' + JSON.stringify(cookies) + '],');
-                                            });
-
-                                        // DEBUG:
-                                        logger.info('starting the probe');
-                                        // start analysis on the page
-                                        page.evaluate(() => {
-                                            window.__PROBE__.startAnalysis();
+                                    handler.getCookies()
+                                        .then(cookies => {
+                                            logger.info('["cookies",' + JSON.stringify(cookies) + '],');
                                         });
-                                    } else {
-                                        logger.info(`{"status":"error","code":"contentType","message":"content type is ${response.headers['content-type']}"}`);
-                                        _finishJob();
-                                    }
+
+                                    // DEBUG:
+                                    logger.info('starting the probe');
+                                    // start analysis on the page
+                                    handler.startProbe();
                                 } else {
-                                    //DEBUG:
-                                    logger.debug(response);
+                                    logger.info(`{"status":"error","code":"contentType","message":"content type is ${response.headers['content-type']}"}`);
+                                    _requestJobEnd();
                                 }
-                            },
-                            (error) => {
-                                logger.error(error);
-                                _finishJob(1);
-                            },
-                        );
-                },
-                (error) => {
-                    logger.error(error);
-                    _finishJob(1);
-                });
+                            } else {
+                                //DEBUG:
+                                logger.debug(response);
+                            }
+                        },
+                        (error) => {
+                            logger.error(error);
+                            _requestJobEnd(1);
+                        },
+                    );
+            }, (error) => {
+                logger.error(error);
+                _requestJobEnd(1);
+            });
     }
 
-    _getBrowserAndPage()
+    pageHandler.getBrowserAndPage(puppeteer)
         .then(run);
 
 })();
