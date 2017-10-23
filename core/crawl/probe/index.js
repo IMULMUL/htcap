@@ -2,14 +2,15 @@
  * @todo:
  * - return error on failed resources (like in `printStatus()`), error type supported:
  *     requestTimeout, invalidContentType, pageCrash, probeException, failedStatus (40x, 50x) …
- * - return redirect
  * - closing the probe nicely (ie. return finding on SIGINT)
  *
  * @todo (blocked):
- * - make possible to send POST request and custom headers on page.goto() see: https://github.com/GoogleChrome/puppeteer/issues/1062
- * - set a referer if any provided
- * - block navigation away
- * - return content related to "navigationRequest" as in PhantomJS
+ * - make possible to send POST request and custom headers (set a referer) on page.goto() see: {@link https://github.com/GoogleChrome/puppeteer/issues/1062}
+ *   possible workaround: using `request.continue({overrides})` on the first request
+ * - block navigation away and return content related to "navigationRequest" as in PhantomJS see: {@link https://github.com/GoogleChrome/puppeteer/issues/823}
+ *   possible workaround: watching `onunload` page event to prevent navigation
+ * - handle redirect see: {@link https://github.com/GoogleChrome/puppeteer/issues/1132}
+ *   possible workaround: blocking the request with `request.status === 30x`
  *
  * @todo (nice to have):
  * - add a debug level
@@ -138,7 +139,7 @@
                 () => {
                     let inputValues = utils.generateRandomValues(options.random);
 
-                    // initializing the probe into the page context
+                    // on every new document, initializing the probe into the page context
                     page.evaluateOnNewDocument(setProbe, ...[options, inputValues, constants]);
 
                     page.goto(options.startUrl.href, {waitUntil: 'networkidle'})
@@ -155,7 +156,7 @@
 
                                         // DEBUG:
                                         logger.info('starting the probe');
-
+                                        // start analysis on the page
                                         page.evaluate(() => {
                                             window.__PROBE__.startAnalysis();
                                         });
