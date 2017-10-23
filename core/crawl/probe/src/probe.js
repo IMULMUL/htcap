@@ -360,7 +360,7 @@
 
             printRequests() {
                 this.requestToPrint.forEach(function(request) {
-                    window.__PROBE_FN_RETURN_STRING__('["request",' + request + '],');
+                    window.__PROBE_FN_RETURN_REQUEST__(['request', request]);
                 });
             }
 

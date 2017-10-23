@@ -1,20 +1,16 @@
 /**
- * @todo:
- * - return error on failed resources (like in `printStatus()`), error type supported:
- *     requestTimeout, invalidContentType, pageCrash, probeException, failedStatus (40x, 50x) …
- * - closing the probe nicely (ie. return finding on SIGINT)
- *
  * @todo (blocked):
  * - make possible to send POST request and custom headers (set a referer) on page.goto() see: {@link https://github.com/GoogleChrome/puppeteer/issues/1062}
  *   possible workaround: using `request.continue({overrides})` on the first request
  * - block navigation away and return content related to "navigationRequest" as in PhantomJS see: {@link https://github.com/GoogleChrome/puppeteer/issues/823}
  *   possible workaround: watching `onunload` page event to prevent navigation
- * - handle redirect see: {@link https://github.com/GoogleChrome/puppeteer/issues/1132}
+ * - handle redirect see: {@link https://github.com/GoogleChrome/puppeteer/issues/1132}
  *   possible workaround: blocking the request with `request.status === 30x`
  *
  * @todo (nice to have):
  * - add a debug level
  * - return cookies for every request
+ * - also analyse the error pages (40x and 50x)
  */
 
 (function() {
@@ -31,24 +27,29 @@
     const pageHandler = require('./src/page-handler');
 
     let options = utils.getOptionsFromArgs(),
+        result = [],
         browser,
         handler;
 
     // handling SIGINT signal
     process.on('SIGINT', () => {
+        result.push({'status': 'error', 'code': 'interruptReceived'});
         _requestJobEnd();
     });
 
-    function _requestJobEnd(errorCode) {
+    function _requestJobEnd(exitCode) {
 
-        logger.info('closing Node process');
+        //DEBUG:
+        // logger.debug('closing Node process');
+
+        logger.info(`result: ${JSON.stringify(result)}`);
         if (browser) {
             browser.close()
                 .then(() => {
-                    process.exit(errorCode);
+                    process.exit(exitCode);
                 });
         } else {
-            process.exit(errorCode);
+            process.exit(exitCode);
         }
     }
 
@@ -58,9 +59,13 @@
 
         handler = new pageHandler.Handler(page, constants, options);
 
-        handler.on('finished', _requestJobEnd);
-        handler.on('probe_message', (msg) => {
-            logger.info(msg);
+        handler.on('finished', (exitCode, status) => {
+            result.push(status);
+            _requestJobEnd(exitCode);
+        });
+
+        handler.on('probeRequest', (request) => {
+            result.push(request);
         });
 
         handler.initialize()
@@ -71,37 +76,38 @@
                 page.goto(options.startUrl.href, {waitUntil: 'networkidle'})
                     .then(response => {
 
-                            if (response.ok) {
-                                // checking if it's some HTML document
-                                if (response.headers['content-type']
+                        if (response.ok) {
+                            // checking if it's some HTML document
+                            if (response.headers['content-type']
                                         .toLowerCase()
                                         .includes('text/html')) {
 
-                                    handler.getCookies()
+                                handler.getCookies()
                                         .then(cookies => {
-                                            logger.info('["cookies",' + JSON.stringify(cookies) + '],');
+                                            result.push(['cookies', cookies]);
                                         });
 
-                                    // DEBUG:
-                                    logger.info('starting the probe');
-                                    // start analysis on the page
-                                    handler.startProbe();
-                                } else {
-                                    logger.info(`{"status":"error","code":"contentType","message":"content type is ${response.headers['content-type']}"}`);
-                                    _requestJobEnd();
-                                }
+                                // DEBUG:
+                                logger.debug('starting the probe');
+                                // start analysis on the page
+                                handler.startProbe();
                             } else {
-                                //DEBUG:
-                                logger.debug(response);
+                                result.push({'status': 'error', 'code': 'contentType', 'message': `content type is ${response.headers['content-type']}`});
+                                _requestJobEnd();
                             }
-                        },
-                        (error) => {
-                            logger.error(error);
+                        } else {
+                            result.push({'status': 'error', 'code': 'load', 'message': `response code is ${response.status}`});
                             _requestJobEnd(1);
-                        },
-                    );
+                        }
+                    },
+                    (error) => {
+                        logger.error(error);
+                        result.push({'status': 'error', 'code': 'load', 'message': `error is ${error}`});
+                        _requestJobEnd(1);
+                    });
             }, (error) => {
                 logger.error(error);
+                result.push({'status': 'error', 'code': 'probeError', 'message': `error is ${error}`});
                 _requestJobEnd(1);
             });
     }

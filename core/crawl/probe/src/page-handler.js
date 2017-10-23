@@ -33,7 +33,7 @@
         initialize() {
             this._page.on('request', interceptedRequest => {
                 //DEBUG:
-                logger.info(`intercepted request: ${interceptedRequest.resourceType} ${interceptedRequest.url}`);
+                // logger.debug(`intercepted request: ${interceptedRequest.resourceType} ${interceptedRequest.url}`);
 
                 // block image loading
                 if (interceptedRequest.resourceType === 'image') {
@@ -44,50 +44,56 @@
             });
 
             this._page.on('console', consoleMessage => {
-                logger.log('debug', `Page console message, type "${consoleMessage.type}": "${consoleMessage.text}"`);
+                //DEBUG:
+                // logger.debug(`Page console message, type "${consoleMessage.type}": "${consoleMessage.text}"`);
             });
 
             this._page.on('dialog', dialog => {
-                logger.log('debug', `Page dialog, type "${dialog.type}": "${dialog.message()}"`);
+                //DEBUG:
+                // logger.debug(`Page dialog, type "${dialog.type}": "${dialog.message()}"`);
                 dialog.accept();
             });
 
             this._page.on('error', error => {
-                logger.log('warn', `Page crash: "${error.code}", "${error.message()}"`);
-                this.emit('finished', 1);
+                //DEBUG:
+                // logger.debug(`Page crash: "${error.code}", "${error.message()}"`);
+                let status = {'status': 'error', 'code': 'pageCrash', 'message': `Page crash with: "${error.code}", "${error.message()}"`};
+                this.emit(Handler.Events.Finished, 1, status);
             });
 
-            //DEBUG:
-            this._page.on('frameattached', frameTo => {
-                logger.info(`frameattached to ${frameTo.url()}`);
-            });
-            //DEBUG:
-            this._page.on('framenavigated', frameTo => {
-                logger.info(`framenavigated to ${frameTo.url()}`);
-            });
-            //DEBUG:
-            this._page.on('requestfailed', failedRequest => {
-                logger.info(`requestfailed: ${failedRequest.url}`);
-            });
-            //DEBUG:
-            this._page.on('requestfinished', finishedRequest => {
-                logger.info(`requestfinished: ${finishedRequest.response().status}, ${finishedRequest.method} ${finishedRequest.url}`);
-            });
-            //DEBUG:
+            // //DEBUG:
+            // this._page.on('frameattached', frameTo => {
+            //     logger.debug(`frameattached to ${frameTo.url()}`);
+            // });
+            // //DEBUG:
+            // this._page.on('framenavigated', frameTo => {
+            //     logger.debug(`framenavigated to ${frameTo.url()}`);
+            // });
+            // //DEBUG:
+            // this._page.on('requestfailed', failedRequest => {
+            //     logger.debug(`requestfailed: ${failedRequest.url}`);
+            // });
+            // //DEBUG:
+            // this._page.on('requestfinished', finishedRequest => {
+            //     logger.debug(`requestfinished: ${finishedRequest.response().status}, ${finishedRequest.method} ${finishedRequest.url}`);
+            // });
+            // //DEBUG:
             // this._page.on('load', () => {
             //     logger.debug('load done');
             // });
 
 
             // set function to return value from probe
-            this._page.exposeFunction('__PROBE_FN_RETURN_STRING__', (request) => {
-                this.emit('probe_message', `Probe return: ${request}`);
+            this._page.exposeFunction('__PROBE_FN_RETURN_REQUEST__', (request) => {
+                this.emit(Handler.Events.ProbeRequest, request);
             });
 
             // set function to request end from probe
             this._page.exposeFunction('__PROBE_FN_REQUEST_END__', () => {
-                logger.info('Probe finished');
-                this.emit('finished');
+                //DEBUG:
+                // logger.debug('Probe finished');
+                let status = {'status': 'ok'};
+                this.emit(Handler.Events.Finished, 0, status);
             });
 
             return Promise.all([
@@ -116,8 +122,12 @@
         getCookies() {
             return this._page.cookies();
         }
-
     }
+
+    Handler.Events = {
+        Finished: 'finished',
+        ProbeRequest: 'probeRequest',
+    };
 
     exports.Handler = Handler;
 
