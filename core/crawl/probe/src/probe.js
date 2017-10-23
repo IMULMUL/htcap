@@ -151,8 +151,6 @@
                 } else {
                     // DEBUG:
                     console.debug('eventLoop END');
-                    // window.__callPhantom({cmd: 'end'});
-                    this._probe.printRequests();
                     window.__PROBE_FN_REQUEST_END__();
                 }
             }
@@ -344,24 +342,18 @@
 
                 this.eventLoopManager = new EventLoopManager(this, window.__PROBE_CONSTANTS__.eventLoopConfig);
 
-                this.requestToPrint = [];
+                this.seenRequest = [];
                 this._currentPageEvent = undefined;
                 this._eventsMap = [];
                 this._triggeredPageEvents = [];
             }
 
-
-            addToRequestToPrint(request) {
+            printRequest(request) {
                 let requestKey = request.key;
-                if (this.requestToPrint.indexOf(requestKey) < 0) {
-                    this.requestToPrint.push(requestKey);
-                }
-            }
-
-            printRequests() {
-                this.requestToPrint.forEach(function(request) {
+                if (this.seenRequest.indexOf(requestKey) < 0) {
+                    this.seenRequest.push(requestKey);
                     window.__PROBE_FN_RETURN_REQUEST__(['request', request]);
-                });
+                }
             }
 
             printJSONP(node) {
@@ -375,7 +367,7 @@
                     // JSONP must have a querystring...
                     if (a.search) {
                         let req = new Request('jsonp', 'GET', src, null, this.getLastTriggerPageEvent());
-                        this.addToRequestToPrint(req);
+                        this.printRequest(req);
                     }
                 }
             }
@@ -390,13 +382,13 @@
                 }
 
                 if (req) {
-                    this.addToRequestToPrint(req);
+                    this.printRequest(req);
                 }
             }
 
             printWebsocket(url) {
                 let req = new Request('websocket', 'GET', url, null, this.getLastTriggerPageEvent());
-                this.addToRequestToPrint(req);
+                this.printRequest(req);
             }
 
             getRandomValue(type) {
@@ -713,7 +705,7 @@
              */
             _printRequestFromForm(element) {
                 if (element.tagName.toLowerCase() === 'form') {
-                    this.addToRequestToPrint(this.getFormAsRequest(element));
+                    this.printRequest(this.getFormAsRequest(element));
                 }
             }
 
@@ -915,7 +907,7 @@
                 }
 
                 window.__PROBE__.sentXHRs.push(requestKey);
-                window.__PROBE__.addToRequestToPrint(this.__request);
+                window.__PROBE__.printRequest(this.__request);
 
                 if (!this.__skipped) {
                     return this.__originalSend(data);
@@ -966,7 +958,7 @@
 
             HTMLFormElement.prototype.__originalSubmit = HTMLFormElement.prototype.submit;
             HTMLFormElement.prototype.submit = function() {
-                window.__PROBE__.addToRequestToPrint(window.__PROBE__.getFormAsRequest(this));
+                window.__PROBE__.printRequest(window.__PROBE__.getFormAsRequest(this));
                 return this.__originalSubmit();
             };
 
