@@ -3,13 +3,30 @@
 
     const EventEmitter = require('events');
 
-    const logger = require('../logger');
-
     const setProbe = require('./probe').setProbe;
 
-    exports.getBrowserAndPage = function(puppeteer) {
+    /**
+     *
+     * @param {Puppeteer} puppeteer
+     * @param {String} proxy - in format: `hostname:port`
+     * @return {Promise.<TResult>|*}
+     */
+    exports.getBrowserAndPage = function(puppeteer, proxy) {
+        let browserArgs = [
+            '--ignore-certificate-errors',
+            '--ssl-version-max=tls1.3',
+            '--ssl-version-min=tls1',
+            '--disable-web-security',
+            // '--allow-running-insecure-content',
+        ];
+
+        if (proxy) {
+            browserArgs.push(`--proxy-server=${proxy}`);
+        }
+
         return puppeteer.launch({
             headless: false,
+            args: browserArgs,
         })
             .then(createdBrowser => {
                 return createdBrowser.newPage()
