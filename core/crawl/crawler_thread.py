@@ -136,13 +136,10 @@ class CrawlerThread(threading.Thread):
             # print "-- JSON DECODE ERROR %s" % jsn
             raise
 
-    def _send_probe(self, request, errors):
-
-        url = request.url
-        probe = None
-        retries = CrawlerThread._PROCESS_RETRIES
+    def _set_params(self, request):
         params = []
         cookies = []
+        url = request.url
 
         if request.method == "POST":
             params.append("-P")
@@ -152,10 +149,8 @@ class CrawlerThread(threading.Thread):
         if len(request.cookies) > 0:
             for cookie in request.cookies:
                 cookies.append(cookie.get_dict())
-
             with open(self._cookie_file, 'w') as fil:
                 fil.write(json.dumps(cookies))
-
             params.extend(("-c", self._cookie_file))
 
         if request.http_auth:
@@ -165,6 +160,14 @@ class CrawlerThread(threading.Thread):
             params.extend(("-r", request.referer))
 
         params.append(url)
+
+        return params
+
+    def _send_probe(self, request, errors):
+
+        probe = None
+        retries = CrawlerThread._PROCESS_RETRIES
+        params = self._set_params(request)
 
         while retries:
 

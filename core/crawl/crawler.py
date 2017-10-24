@@ -39,7 +39,7 @@ from core.lib.http_get import HttpGet
 from core.lib.request import Request
 from core.lib.shell import CommandExecutor
 from core.lib.utils import get_program_infos, getrealdir, print_progressbar, stdoutw, \
-    get_phantomjs_cmd, normalize_url, cmd_to_str, generate_filename
+    get_probe_cmd, normalize_url, cmd_to_str, generate_filename
 
 
 # TODO: clean the exception handling (no more `except Exception:`)
@@ -53,7 +53,9 @@ from core.lib.utils import get_program_infos, getrealdir, print_progressbar, std
 class Crawler:
     def __init__(self, argv):
 
-        self.base_dir = getrealdir(__file__) + os.sep
+        self.arg = argv
+
+        self.base_dir = getrealdir(__file__)
 
         self.crawl_start_date = int(time.time())
         self.crawl_end_date = None
@@ -62,11 +64,10 @@ class Crawler:
 
         # initialize probe
         self._probe = {
-            "cmd": get_phantomjs_cmd(),
+            "cmd": get_probe_cmd(),
             "options": []
         }
-
-        self._main(argv)
+        self._setup_shared()
 
     def _usage(self):
         print("""htcap crawler ver {version}
@@ -131,7 +132,7 @@ Options:
             max_redirects=self._defaults['max_redirects']
         ))
 
-    def _main(self, argv):
+    def _setup_shared(self):
         """
         instantiate crawler, probe and start the crawling loop
 
@@ -157,14 +158,14 @@ Options:
         http_auth = None
         get_robots_txt = True
 
-        # validate phantomjs presence
+        # validate probe presence
         if not self._probe["cmd"]:
-            print("Error: unable to find phantomjs executable")
+            print("Error: unable to find probe")
             sys.exit(1)
 
         # retrieving user arguments
         try:
-            opts, args = getopt.getopt(argv, 'ho:qvm:s:D:P:Fd:c:C:r:x:p:n:A:U:t:SGNR:IOKe:')
+            opts, args = getopt.getopt(self.arg, 'ho:qvm:s:D:P:Fd:c:C:r:x:p:n:A:U:t:SGNR:IOKe:')
         except getopt.GetoptError as err:
             print(str(err))
             self._usage()
@@ -283,7 +284,7 @@ Options:
                 "* WARNING: SSLContext is not supported with this version of python,"
                 " consider to upgrade to >= 2.7.9 in case of SSL errors")
 
-        stdoutw("Initializing . ")
+    def run(self):
 
         # get database
         try:
@@ -293,7 +294,7 @@ Options:
                 htcap_version=get_program_infos()['version'],
                 target=Shared.start_url,
                 start_date=self.crawl_start_date,
-                commandline=cmd_to_str(argv),
+                commandline=cmd_to_str(self.arg),
                 user_agent=Shared.options['user_agent'],
                 start_cookies=Shared.start_cookies
             )
@@ -524,7 +525,7 @@ Options:
                 "--proxy=%s:%s" % (Shared.options['proxy']['host'], Shared.options['proxy']['port']))
 
         # finally, set the probe script
-        self._probe["cmd"].append(self.base_dir + 'probe/analyze.js')
+        self._probe["cmd"].append(self.base_dir + 'src/probe/analyze.js')
 
         if len(Shared.excluded_urls) > 0:
             self._probe["options"].extend(("-X", ",".join(Shared.excluded_urls)))

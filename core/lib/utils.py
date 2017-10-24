@@ -166,7 +166,7 @@ def remove_tokens(query):
     return join_qsl(nqs)
 
 
-def get_phantomjs_cmd():
+def get_probe_cmd():
     standard_paths = [os.getcwd()]
     envpath = os.environ['PATH'].split(os.pathsep)
     exe_name = "phantomjs"
