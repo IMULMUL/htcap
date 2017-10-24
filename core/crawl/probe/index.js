@@ -31,6 +31,8 @@
         browser,
         handler;
 
+    let startTime = new Date();
+
     // handling SIGINT signal
     process.on('SIGINT', () => {
         result.push({'status': 'error', 'code': 'interruptReceived'});
@@ -42,7 +44,7 @@
         //DEBUG:
         // logger.debug('closing Node process');
 
-        logger.info(`result: ${JSON.stringify(result)}`);
+        logger.info(`${result.length} results in ${(Date.now() - startTime) / 1000} sec : ${JSON.stringify(result)}`);
         if (browser) {
             browser.close()
                 .then(() => {
@@ -53,11 +55,11 @@
         }
     }
 
-    function run([newBrowser, page]) {
+    function run([newBrowser, newPage]) {
 
         browser = newBrowser;
 
-        handler = new pageHandler.Handler(page, constants, options);
+        handler = new pageHandler.Handler(newPage, constants, options);
 
         handler.on('finished', (exitCode, status) => {
             result.push(status);
@@ -69,10 +71,7 @@
         });
 
         handler.initialize()
-            .then(() => {
-
-                handler.setProbe();
-
+            .then((page) => {
                 page.goto(options.startUrl.href, {waitUntil: 'networkidle'})
                     .then(response => {
 
@@ -88,7 +87,7 @@
                                         });
 
                                 // DEBUG:
-                                logger.debug('starting the probe');
+                                // logger.debug('starting the probe');
                                 // start analysis on the page
                                 handler.startProbe();
                             } else {

@@ -25,7 +25,7 @@
         }
 
         return puppeteer.launch({
-            headless: false,
+            headless: true,
             args: browserArgs,
         })
             .then(createdBrowser => {
@@ -60,10 +60,6 @@
                 }
             });
 
-            this._page.on('console', consoleMessage => {
-                //DEBUG:
-                // logger.debug(`Page console message, type "${consoleMessage.type}": "${consoleMessage.text}"`);
-            });
 
             this._page.on('dialog', dialog => {
                 //DEBUG:
@@ -78,6 +74,10 @@
                 this.emit(Handler.Events.Finished, 1, status);
             });
 
+            //DEBUG:
+            // this._page.on('console', consoleMessage => {
+            //     // logger.debug(`Page console message, type "${consoleMessage.type}": "${consoleMessage.text}"`);
+            // });
             // //DEBUG:
             // this._page.on('frameattached', frameTo => {
             //     logger.debug(`frameattached to ${frameTo.url()}`);
@@ -119,10 +119,14 @@
                 this._page.setViewport(this._constants.viewport),
                 this._page.setRequestInterceptionEnabled(true),
                 this._page.authenticate(this._options.httpAuth),
-            ]);
+            ])
+                .then(() => {
+                    this._setProbe();
+                    return this._page;
+                });
         }
 
-        setProbe() {
+        _setProbe() {
             // on every new document, initializing the probe into the page context
             this._page.evaluateOnNewDocument(setProbe, ...[this._options, this._constants]);
         }
