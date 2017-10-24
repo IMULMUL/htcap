@@ -62,6 +62,20 @@ class Crawler:
 
         self._defaults = CRAWLER_DEFAULTS
 
+        # initialize crawl config
+        self._start_referer = None
+
+        self._threads = []
+        self._num_threads = self._defaults['num_threads']
+
+        self._output_mode = self._defaults['output_mode']
+        self._cookie_string = None
+        self._display_progress = True
+        self._verbose = False
+        self._initial_checks = True
+        self._http_auth = None
+        self._get_robots_txt = True
+
         # initialize probe
         self._probe = {
             "cmd": ["node"],
@@ -144,20 +158,6 @@ Options:
         Shared.th_condition = threading.Condition()
         Shared.main_condition = threading.Condition()
 
-        # initialize crawl config
-        start_referer = None
-
-        threads = []
-        num_threads = self._defaults['num_threads']
-
-        output_mode = self._defaults['output_mode']
-        cookie_string = None
-        display_progress = True
-        verbose = False
-        initial_checks = True
-        http_auth = None
-        get_robots_txt = True
-
         # validate probe presence
         if not self._probe["cmd"]:
             print("Error: unable to find probe")
@@ -181,24 +181,24 @@ Options:
                 self._usage()
                 sys.exit(0)
             elif o == '-c':  # cookie string
-                cookie_string = v
+                self._cookie_string = v
             elif o == '-C':  # cookie file
                 try:
                     with open(v) as cf:
-                        cookie_string = cf.read()
+                        self._cookie_string = cf.read()
                 except Exception as e:
                     print("* Error reading cookie file: {}".format(str(e)))
                     sys.exit(1)
             elif o == '-r':  # start referrer
-                start_referer = v
+                self._start_referer = v
             elif o == '-n':  # number of threads
-                num_threads = int(v)
+                self._num_threads = int(v)
             elif o == '-t':  # time out
                 Shared.options['process_timeout'] = int(v)
             elif o == '-q':  # quiet
-                display_progress = False
+                self._display_progress = False
             elif o == '-A':  # authentication
-                http_auth = v
+                self._http_auth = v
             elif o == '-p':  # proxy
                 proxy = v.split(":")
                 if proxy[0] not in ("http", "socks5"):
@@ -220,7 +220,7 @@ Options:
                     self._usage()
                     print("* Error: wrong output mode set '%s'\n" % v)
                     sys.exit(1)
-                output_mode = v
+                self._output_mode = v
             elif o == "-R":  # redirects limit
                 Shared.options['max_redirects'] = int(v)
             elif o == "-U":  # user agent
@@ -238,9 +238,9 @@ Options:
                     sys.exit(1)
                 Shared.options['mode'] = v
             elif o == "-S":  # skip initial checks
-                initial_checks = False
+                self._initial_checks = False
             elif o == "-I":  # ignore robots.txt
-                get_robots_txt = False
+                self._get_robots_txt = False
             elif o == "-D":  # crawling depth
                 Shared.options['max_depth'] = int(v)
             elif o == "-P":  # crawling depth for forms
@@ -250,7 +250,7 @@ Options:
             elif o == "-F":  # do not crawl forms
                 Shared.options['crawl_forms'] = False
             elif o == "-v":  # verbose
-                verbose = True
+                self._verbose = True
             elif o == "-e":  # seed for random value
                 Shared.options["random_seed"] = v
 
@@ -259,10 +259,10 @@ Options:
             print("* Warning: option -d is valid only if scope is %s" % CRAWLSCOPE_DOMAIN)
 
         # initialize cookies
-        if cookie_string:
+        if self._cookie_string:
             try:
 
-                start_cookies = self._parse_cookie_string(cookie_string)
+                start_cookies = self._parse_cookie_string(self._cookie_string)
                 for cookie in start_cookies:
                     Shared.start_cookies.append(Cookie(cookie, Shared.start_url))
 
@@ -272,7 +272,7 @@ Options:
 
         # retrieve start url and output file arguments
         Shared.start_url = normalize_url(args[0])
-        outfile_name = args[1]
+        self._outfile_name = args[1]
 
         # add start url domain to allowed domains
         purl = urlsplit(Shared.start_url)
@@ -288,7 +288,7 @@ Options:
 
         # get database
         try:
-            database = self._get_database(outfile_name, output_mode)
+            database = self._get_database(self._outfile_name, self._output_mode)
 
             crawl_id = database.save_crawl_info(
                 htcap_version=get_program_infos()['version'],
@@ -332,7 +332,7 @@ Options:
         # create the start request object from provided arguments
         start_request_from_args = Request(
             REQTYPE_LINK, "GET", Shared.start_url, set_cookie=Shared.start_cookies,
-            http_auth=http_auth, referer=start_referer)
+            http_auth=self._http_auth, referer=self._start_referer)
 
         def _is_not_in_past_requests(request):
             """
@@ -345,7 +345,7 @@ Options:
             return is_in_request
 
         # check starting url
-        if initial_checks:
+        if self._initial_checks:
             try:
                 self._check_request(start_request_from_args)
                 stdoutw(". ")
@@ -353,7 +353,7 @@ Options:
                 print("\nAborted")
                 sys.exit(0)
 
-        if output_mode in (CRAWLOUTPUT_RESUME, CRAWLOUTPUT_COMPLETE):
+        if self._output_mode in (CRAWLOUTPUT_RESUME, CRAWLOUTPUT_COMPLETE):
             try:
                 # make the start url given in arguments crawlable again
                 database.connect()
@@ -367,7 +367,7 @@ Options:
                 Shared.requests_index = len(Shared.requests)
 
                 # if resume, add requests from db
-                if output_mode == CRAWLOUTPUT_RESUME:
+                if self._output_mode == CRAWLOUTPUT_RESUME:
                     start_requests.extend(database.get_not_crawled_request())
 
                 # if request from args is neither in past or future requests
@@ -380,7 +380,7 @@ Options:
             start_requests.append(start_request_from_args)
 
         # retrieving robots.txt content
-        if get_robots_txt:
+        if self._get_robots_txt:
             try:
                 start_requests.extend(
                     filter(_is_not_in_past_requests, self._get_requests_from_robots(start_request_from_args))
@@ -402,17 +402,17 @@ Options:
         )
 
         # starting crawling threads
-        print("Database %s initialized, crawl starting with %d threads" % (database, num_threads))
+        print("Database %s initialized, crawl starting with %d threads" % (database, self._num_threads))
 
-        for n in range(0, num_threads):
+        for n in range(0, self._num_threads):
             thread = CrawlerThread()
-            threads.append(thread)
+            self._threads.append(thread)
             thread.start()
 
         # running crawl loop
-        self._main_loop(threads, start_requests, database, display_progress, verbose)
+        self._main_loop(self._threads, start_requests, database, self._display_progress, self._verbose)
 
-        self._kill_threads(threads)
+        self._kill_threads(self._threads)
 
         self.crawl_end_date = int(time.time())
 

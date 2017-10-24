@@ -177,7 +177,7 @@ class CrawlerThread(threading.Thread):
             jsn = cmd.execute(Shared.options['process_timeout'] + 2)
 
             if jsn is None:
-                errors.appnd(ERROR_PROBEKILLED)
+                errors.append(ERROR_PROBEKILLED)
                 sleep(CrawlerThread._PROCESS_RETRIES_INTERVAL)  # ... ???
                 retries -= 1
                 continue
