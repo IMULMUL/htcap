@@ -35,8 +35,8 @@ class SetProbeTest(unittest.TestCase):
         crawler = Crawler(args)
         self.setup_shared_object()
         crawler._set_probe()
-
-        self.assertIn('/usr/bin/node', crawler._probe["cmd"])
+        self.assertIn("index.js", crawler._probe["cmd"][1])
+        self.assertIn('node', crawler._probe["cmd"][0])
 
     @mock.patch('core.crawl.crawler.get_probe_cmd', return_value=['/usr/bin/node'])
     def test_set_probe_puts_proxy_in_options(self, mock_probe_cmd):

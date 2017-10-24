@@ -64,7 +64,7 @@ class Crawler:
 
         # initialize probe
         self._probe = {
-            "cmd": get_probe_cmd("node"),
+            "cmd": ["node"],
             "options": []
         }
         self._setup_shared()
@@ -525,7 +525,7 @@ Options:
                 "--proxy=%s:%s" % (Shared.options['proxy']['host'], Shared.options['proxy']['port']))
 
         # finally, set the probe script
-        self._probe["cmd"].append(self.base_dir + 'src/probe/analyze.js')
+        self._probe["cmd"].append(self.base_dir + 'src/probe/index.js')
 
         if len(Shared.excluded_urls) > 0:
             self._probe["options"].extend(("-X", ",".join(Shared.excluded_urls)))
