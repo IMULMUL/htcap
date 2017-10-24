@@ -64,7 +64,7 @@ class Crawler:
 
         # initialize probe
         self._probe = {
-            "cmd": get_probe_cmd(),
+            "cmd": get_probe_cmd("node"),
             "options": []
         }
         self._setup_shared()

@@ -166,10 +166,10 @@ def remove_tokens(query):
     return join_qsl(nqs)
 
 
-def get_probe_cmd():
+def get_probe_cmd(probe):
     standard_paths = [os.getcwd()]
     envpath = os.environ['PATH'].split(os.pathsep)
-    exe_name = "phantomjs"
+    exe_name = probe
 
     if sys.platform != "win32":
         # force check to standard paths in case $PATH is not set (ie crontab)
