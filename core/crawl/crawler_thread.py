@@ -28,8 +28,9 @@ from core.lib.exception import ThreadExitRequestException
 from core.lib.http_get import HttpGet
 from core.lib.shell import CommandExecutor
 
-
 # TODO: use NamedTemporaryFile for self._cookie_file
+from core.lib.utils import cmd_to_str
+
 
 class CrawlerThread(threading.Thread):
     _PROCESS_RETRIES_INTERVAL = 0.5
@@ -125,6 +126,8 @@ class CrawlerThread(threading.Thread):
 
     @staticmethod
     def _load_probe_json(jsn):
+
+        print (jsn);
         jsn = jsn.strip()
         if not jsn:
             jsn = "["
@@ -171,7 +174,7 @@ class CrawlerThread(threading.Thread):
 
         while retries:
 
-            # print cmd_to_str(Shared.probe_cmd + params)
+            print cmd_to_str(Shared.probe_cmd + params)
 
             cmd = CommandExecutor(Shared.probe_cmd + params)
             jsn = cmd.execute(Shared.options['process_timeout'] + 2)

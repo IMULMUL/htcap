@@ -525,12 +525,12 @@ Options:
                                                                   Shared.options['proxy']['port']))
 
         # finally, set the probe script
-        self._probe["cmd"].append(self.base_dir + 'src/probe/index.js')
+        self._probe["cmd"].append(self.base_dir + 'probe/index.js')
 
         if len(Shared.excluded_urls) > 0:
             self._probe["options"].extend(("-X", ",".join(Shared.excluded_urls)))
 
-        self._probe["options"].extend(("-x", str(Shared.options['process_timeout'])))
+        # self._probe["options"].extend(("-x", str(Shared.options['process_timeout'])))
         self._probe["options"].extend(("-A", Shared.options['user_agent']))
 
         if not Shared.options['override_timeout_functions']:
