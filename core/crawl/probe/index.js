@@ -100,18 +100,18 @@
                         }
                     },
                     (error) => {
-                        logger.error(error);
+                        // logger.error(error);
                         result.push({'status': 'error', 'code': 'load', 'message': `error is ${error}`});
                         _requestJobEnd(1);
                     });
             }, (error) => {
-                logger.error(error);
+                // logger.error(error);
                 result.push({'status': 'error', 'code': 'probeError', 'message': `error is ${error}`});
                 _requestJobEnd(1);
             });
     }
 
-    pageHandler.getBrowserAndPage(puppeteer)
+    pageHandler.getBrowserAndPage(puppeteer, options.proxyAddress)
         .then(run);
 
 })();
