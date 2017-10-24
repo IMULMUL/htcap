@@ -9,7 +9,6 @@ from core.lib.request import Request
 
 
 class SetProbeTest(unittest.TestCase):
-
     def setup_shared_object(self,
                             mode=CRAWLER_DEFAULTS['mode'],
                             timeout=CRAWLER_DEFAULTS['process_timeout'],
@@ -19,7 +18,6 @@ class SetProbeTest(unittest.TestCase):
                             override=CRAWLER_DEFAULTS['override_timeout_functions'],
                             excluded='',
                             ):
-
         Shared.excluded_urls = excluded
         Shared.options['random_seed'] = seed
         Shared.options['proxy'] = proxy
@@ -30,7 +28,6 @@ class SetProbeTest(unittest.TestCase):
 
     @mock.patch('core.crawl.crawler.get_probe_cmd', return_value=['/usr/bin/node'])
     def test_setting_probe_calls_node(self, mock_probe_cmd):
-
         args = ['http://example.com', 'out.txt']
         crawler = Crawler(args)
         self.setup_shared_object()
@@ -40,19 +37,16 @@ class SetProbeTest(unittest.TestCase):
 
     @mock.patch('core.crawl.crawler.get_probe_cmd', return_value=['/usr/bin/node'])
     def test_set_probe_puts_proxy_in_options(self, mock_probe_cmd):
-
         args = ['http://example.com', 'out.txt']
         crawler = Crawler(args)
         self.setup_shared_object(proxy={'proto': 'http', 'host': '254.254.254.254', 'port': '1'})
         crawler._set_probe()
 
-        self.assertIn('--proxy=254.254.254.254:1', crawler._probe["options"])
-        self.assertIn('--proxy-type=http', crawler._probe["options"])
-        self.assertNotIn('--proxy=254.254.254.254:1', crawler._probe["cmd"])
+        self.assertIn('--proxy=http://254.254.254.254:1', crawler._probe["options"])
+        self.assertEqual(len(crawler._probe["cmd"]), 2)
 
 
 class SendProbeTest(unittest.TestCase):
-
     def setup_request_object(self):
         pass
 

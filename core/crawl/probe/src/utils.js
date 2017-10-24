@@ -118,7 +118,14 @@
                 dest: 'POSTData',
             },
         );
-
+        argumentParser.addArgument(
+            '--proxy',
+            {
+                help: 'Proxy address in format "proxy-scheme://proxy-ip:proxy-port"',
+                dest: 'proxyAddress',
+                defaultValue: '',
+            },
+        );
         argumentParser.addArgument(
             'startUrl',
             {
@@ -169,6 +176,10 @@
         if (args.sendPOST) {
             options.sendPOST = args.sendPOST;
             options.POSTData = args.POSTData;
+        }
+
+        if (args.proxyAddress !== '') {
+            options.proxyAddress = args.proxyAddress;
         }
 
         options.startUrl = url.parse(args.startUrl);
