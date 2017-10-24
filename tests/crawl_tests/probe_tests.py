@@ -3,7 +3,9 @@ import mock
 
 from core.constants import CRAWLER_DEFAULTS
 from core.crawl.crawler import Crawler
+from core.crawl.crawler_thread import CrawlerThread
 from core.crawl.lib.shared import Shared
+from core.lib.request import Request
 
 
 class SetProbeTest(unittest.TestCase):
@@ -54,5 +56,11 @@ class SendProbeTest(unittest.TestCase):
     def setup_request_object(self):
         pass
 
-    def setup(self):
+    def test_set_params_for_probe(self):
+        req = Request("type1", "POST", "http://example.com", data="example data", http_auth="auth1")
+        Shared.options['set_referer'] = None
+        thread = CrawlerThread()
+        params = thread._set_params(req)
+        print(req)
+        self.assertIn("http://example.com/", params)
         pass

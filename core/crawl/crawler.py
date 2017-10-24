@@ -520,8 +520,8 @@ Options:
 
         # set probe proxy
         if Shared.options['proxy']:
-            self._probe["cmd"].append("--proxy-type=%s" % Shared.options['proxy']['proto'])
-            self._probe["cmd"].append(
+            self._probe["options"].append("--proxy-type=%s" % Shared.options['proxy']['proto'])
+            self._probe["options"].append(
                 "--proxy=%s:%s" % (Shared.options['proxy']['host'], Shared.options['proxy']['port']))
 
         # finally, set the probe script
