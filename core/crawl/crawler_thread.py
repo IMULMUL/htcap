@@ -192,7 +192,7 @@ class CrawlerThread(threading.Thread):
 
                 errors.append(probe.errcode)
 
-                if probe.errcode in (ERROR_CONTENTTYPE, ERROR_PROBE_TO):
+                if probe.errcode in (ERROR_CONTENTTYPE, ERROR_PROBE_TO, ERROR_FORCE_STOP):
                     break
 
             sleep(CrawlerThread._PROCESS_RETRIES_INTERVAL)
