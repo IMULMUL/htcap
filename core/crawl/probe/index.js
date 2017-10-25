@@ -44,7 +44,9 @@
         //DEBUG:
         // logger.debug('closing Node process');
 
-        logger.info(`${result.length} results in ${(Date.now() - startTime) / 1000} sec : ${JSON.stringify(result)}`);
+        logger.log('debug', `${result.length} results in ${(Date.now() - startTime) / 1000} sec : ${JSON.stringify(result)}`);
+        logger.log('info', `${JSON.stringify(result)}`);
+
         if (browser) {
             browser.close()
                 .then(() => {

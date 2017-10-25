@@ -70,7 +70,6 @@ class CrawlerThread(threading.Thread):
                 if probe.status == "ok" or probe.errcode == ERROR_PROBE_TO:
 
                     requests = probe.requests
-
                     if len(probe.user_output) > 0:
                         request.user_output = probe.user_output
 
@@ -127,8 +126,8 @@ class CrawlerThread(threading.Thread):
     @staticmethod
     def _load_probe_json(jsn):
 
-        print (jsn);
-        jsn = jsn.strip()
+        # jsn = jsn.strip()
+
         if not jsn:
             jsn = "["
         if jsn[-1] != "]":
@@ -139,7 +138,7 @@ class CrawlerThread(threading.Thread):
             # print "-- JSON DECODE ERROR %s" % jsn
             raise
 
-    def _set_params(self, request):
+    def _set_probe_params(self, request):
         params = []
         cookies = []
         url = request.url
@@ -170,11 +169,9 @@ class CrawlerThread(threading.Thread):
 
         probe = None
         retries = CrawlerThread._PROCESS_RETRIES
-        params = self._set_params(request)
+        params = self._set_probe_params(request)
 
         while retries:
-
-            print cmd_to_str(Shared.probe_cmd + params)
 
             cmd = CommandExecutor(Shared.probe_cmd + params)
             jsn = cmd.execute(Shared.options['process_timeout'] + 2)
@@ -186,9 +183,11 @@ class CrawlerThread(threading.Thread):
                 continue
 
             # try to decode json also after an exception .. sometimes phantom crashes BUT returns a valid json ..
-            if jsn and type(jsn) is not str:
+            if jsn and type(jsn) is not unicode:
                 jsn = jsn[0]
             probe_array = self._load_probe_json(jsn)
+
+            print('\n' + 'PROBE_ARRAY' + '\n' + str(probe_array))
 
             if probe_array:
                 probe = Probe(probe_array, request)
@@ -203,5 +202,4 @@ class CrawlerThread(threading.Thread):
 
             sleep(CrawlerThread._PROCESS_RETRIES_INTERVAL)
             retries -= 1
-
         return probe

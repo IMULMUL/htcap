@@ -4,13 +4,22 @@
 
     let logger = new (winston.Logger)({
         transports: [
-            new (winston.transports.Console)(
+            new (winston.transports.File)(
                 {
+                    level: 'debug',
+                    filename: __dirname + '/logs/debug.log',
                     prettyPrint: true,
                     timestamp: true,
-                    level: 'debug',
                     colorize: true,
                 },
+            ),
+            new (winston.transports.Console)(
+                {
+                    level: 'info',
+                    timestamp: false,
+                    prettyPrint: false,
+                    json: true
+                }
             ),
             // new winston.transports.File({filename: __dirname + '/debug.log', json: false}),
         ],
