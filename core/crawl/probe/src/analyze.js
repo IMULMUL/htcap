@@ -253,14 +253,14 @@ page.open(site, page_settings, function(status) {
         // }
 
         // check for redirect first
-        for (var a = 0; a < response.headers.length; a++) {
-            if (response.headers[a].name.toLowerCase() === 'location') {
-
-                printCookies();
-                printStatus('ok', null, null, response.headers[a].value);
-                phantom.exit(0);
-            }
-        }
+        // for (var a = 0; a < response.headers.length; a++) {
+        //     if (response.headers[a].name.toLowerCase() === 'location') {
+        //
+        //         printCookies();
+        //         printStatus('ok', null, null, response.headers[a].value);
+        //         phantom.exit(0);
+        //     }
+        // }
 
         // assertContentTypeHtml(response);
         //
