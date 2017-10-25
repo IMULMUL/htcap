@@ -40,15 +40,11 @@ class CommandExecutor:
         def executor():
             try:
                 # close_fds=True is needed in threaded programs
-                print('\n'+'COMMAND SENT: '+'\n'+' '.join(self.cmd))
 
                 self.process = subprocess.Popen(self.cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, bufsize=0,
                                                 close_fds=sys.platform != "win32")
                 self.out, self.err = self.process.communicate()
-                print('\n'+'ERROR: '+'\n' + self.err)
-                print('\n'+'RESPONSE: '+'\n' + self.out)
                 self.result = json.loads(self.out)
-                print('\n'+'MESSAGE: '+'\n' + self.result['message'])
 
             except Exception as e:
                 raise

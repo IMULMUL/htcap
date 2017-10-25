@@ -187,8 +187,6 @@ class CrawlerThread(threading.Thread):
                 jsn = jsn[0]
             probe_array = self._load_probe_json(jsn)
 
-            print('\n' + 'PROBE_ARRAY' + '\n' + str(probe_array))
-
             if probe_array:
                 probe = Probe(probe_array, request)
 
