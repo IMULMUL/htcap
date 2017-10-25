@@ -13,7 +13,7 @@
 var page = require('webpage')
     .create();
 
-window.page = page;
+// window.page = page;
 // window.fs = fs;
 
 
@@ -25,11 +25,11 @@ window.page = page;
 
 // window.startTime = Date.now();
 
-window.response = null;
+// window.response = null;
 
 // var headers = {};
 
-var page_settings;// = {encoding: 'utf8'};
+// var page_settings= {encoding: 'utf8'};
 // var random = 'IsHOulDb34RaNd0MsTR1ngbUt1mN0t';
 
 // var args = [];//getopt(system.args, 'A:R:x:ftX:HOPD:c:p:r:');
@@ -89,7 +89,7 @@ var page_settings;// = {encoding: 'utf8'};
 //     }
 // });
 
-var site; // = args.args[1];
+// var site = args.args[1];
 //
 // if (site.length < 4 || site.substring(0, 4)
 //         .toLowerCase() !== 'http') {
@@ -126,13 +126,12 @@ setTimeout(execTimedOut, options.maxExecTime);
 // page.settings.loadImages = false;
 
 
-page.onResourceReceived = function(resource) {
-    if (window.response === null) {
-        window.response = resource;
-        // @TODO sanytize response.contentType
-
-    }
-};
+// page.onResourceReceived = function(resource) {
+//     if (window.response === null) {
+//         window.response = resource;
+//
+//     }
+// };
 
 
 // page.onResourceRequested = function(requestData, networkRequest) {
@@ -210,7 +209,6 @@ page.onNavigationRequested = function(url, type) {
 //     }
 // };
 
-var options, headers;
 // if (options.httpAuth) {
 //     headers['Authorization'] = 'Basic ' + btoa(options.httpAuth[0] + ':' + options.httpAuth[1]);
 // }
@@ -242,46 +240,46 @@ if (options.referer) {
 //     height: 1080,
 // };
 
-page.open(site, page_settings, function(status) {
-    var response = window.response; // just to be clear
-    if (status !== 'success') {
-        // var mess = '';
-        // var out = {response: response};
-        // if (!response || response.headers.length === 0) {
-        //     printStatus('error', 'load');
-        //     phantom.exit(1);
-        // }
+// page.open(site, page_settings, function(status) {
+//     var response = window.response; // just to be clear
+//     if (status !== 'success') {
+// var mess = '';
+// var out = {response: response};
+// if (!response || response.headers.length === 0) {
+//     printStatus('error', 'load');
+//     phantom.exit(1);
+// }
 
-        // check for redirect first
-        // for (var a = 0; a < response.headers.length; a++) {
-        //     if (response.headers[a].name.toLowerCase() === 'location') {
-        //
-        //         printCookies();
-        //         printStatus('ok', null, null, response.headers[a].value);
-        //         phantom.exit(0);
-        //     }
-        // }
+// check for redirect first
+// for (var a = 0; a < response.headers.length; a++) {
+//     if (response.headers[a].name.toLowerCase() === 'location') {
+//
+//         printCookies();
+//         printStatus('ok', null, null, response.headers[a].value);
+//         phantom.exit(0);
+//     }
+// }
 
-        // assertContentTypeHtml(response);
-        //
-        // phantom.exit(1);
-    }
-
-
-    // printCookies();
-    //
-    // assertContentTypeHtml(response);
-
-    // page.evaluate(function() {
-    //     // console.log('startAnalysis');
-    //     // starting page analysis
-    //     // console.log('page initialized ');
-    //
-    //     window.__PROBE__.startAnalysis();
-    // });
+// assertContentTypeHtml(response);
+//
+// phantom.exit(1);
+}
 
 
-});
+// printCookies();
+//
+// assertContentTypeHtml(response);
+
+// page.evaluate(function() {
+//     // console.log('startAnalysis');
+//     // starting page analysis
+//     // console.log('page initialized ');
+//
+//     window.__PROBE__.startAnalysis();
+// });
+
+
+// });
 
 function compareUrls(url1, url2, includeHash) {
     var a1 = document.createElement('a');
@@ -299,34 +297,34 @@ function compareUrls(url1, url2, includeHash) {
 }
 
 
-function printCookies() {
-    // console.log('["cookies",' + JSON.stringify(phantom.cookies) + '],');
-}
+// function printCookies() {
+// console.log('["cookies",' + JSON.stringify(phantom.cookies) + '],');
+// }
 
 
-function printStatus(status, errcode, message, redirect) {
-    var o = {status: status};
-    if (status === 'error') {
-        o.code = errcode;
-        switch (errcode) {
-            case 'load':
-                break;
-            case 'contentType':
-                o.message = message;
-                break;
-            case 'requestTimeout':
-                break;
-            case 'probe_timeout':
-                break;
-        }
-    }
-    if (redirect) {
-        o.redirect = redirect;
-    }
-    // o.time = Math.floor((Date.now() - window.startTime) / 1000);
-    console.log(JSON.stringify(o));
-    // console.log(']');
-}
+// function printStatus(status, errcode, message, redirect) {
+//     var o = {status: status};
+//     if (status === 'error') {
+//         o.code = errcode;
+//         switch (errcode) {
+//             case 'load':
+//                 break;
+//             case 'contentType':
+//                 o.message = message;
+//                 break;
+//             case 'requestTimeout':
+//                 break;
+//             case 'probe_timeout':
+//                 break;
+//         }
+//     }
+//     if (redirect) {
+//         o.redirect = redirect;
+//     }
+//     // o.time = Math.floor((Date.now() - window.startTime) / 1000);
+//     console.log(JSON.stringify(o));
+//     // console.log(']');
+// }
 
 
 function execTimedOut() {

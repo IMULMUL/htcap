@@ -1,4 +1,4 @@
-(function () {
+(function() {
     'use strict';
     const winston = require('winston');
 
@@ -7,7 +7,7 @@
             new (winston.transports.File)(
                 {
                     level: 'debug',
-                    filename: __dirname + '/logs/debug.log',
+                    filename: __dirname + '/debug.log',
                     prettyPrint: true,
                     timestamp: true,
                     colorize: true,
@@ -18,8 +18,8 @@
                     level: 'info',
                     timestamp: false,
                     prettyPrint: false,
-                    json: true
-                }
+                    json: true,
+                },
             ),
             // new winston.transports.File({filename: __dirname + '/debug.log', json: false}),
         ],
