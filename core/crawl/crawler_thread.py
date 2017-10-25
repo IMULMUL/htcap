@@ -28,8 +28,9 @@ from core.lib.exception import ThreadExitRequestException
 from core.lib.http_get import HttpGet
 from core.lib.shell import CommandExecutor
 
+
 # TODO: use NamedTemporaryFile for self._cookie_file
-from core.lib.utils import cmd_to_str
+# from core.lib.utils import cmd_to_str
 
 
 class CrawlerThread(threading.Thread):

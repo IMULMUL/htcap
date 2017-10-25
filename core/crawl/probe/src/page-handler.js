@@ -3,6 +3,8 @@
 
     const EventEmitter = require('events');
 
+    // const logger = require('../logger');
+
     const setProbe = require('./probe').setProbe;
 
     /**
@@ -17,7 +19,7 @@
             '--ssl-version-max=tls1.3',
             '--ssl-version-min=tls1',
             '--disable-web-security',
-            // '--allow-running-insecure-content',
+            '--allow-running-insecure-content',
         ];
 
         if (proxy) {
@@ -26,6 +28,7 @@
 
         return puppeteer.launch({
             headless: true,
+            ignoreHTTPSErrors: true,
             args: browserArgs,
         })
             .then(createdBrowser => {
@@ -45,21 +48,41 @@
             this._page = page;
             this._constants = constants;
             this._options = options;
+            this._lastRedirectResponse = undefined;
         }
 
         initialize() {
             this._page.on('request', interceptedRequest => {
-                //DEBUG:
+                // //DEBUG:
                 // logger.debug(`intercepted request: ${interceptedRequest.resourceType} ${interceptedRequest.url}`);
 
                 // block image loading
                 if (interceptedRequest.resourceType === 'image') {
                     interceptedRequest.abort();
+
+                    // block redirect
+                } else if (this._lastRedirectResponse && this._lastRedirectResponse.headers.location === interceptedRequest.url) {
+                    this.getCookies()
+                        .then(cookies => {
+
+                            let cookiesResult = ['cookies', cookies],
+                                status = {'status': 'ok', 'redirect': interceptedRequest.url};
+                            this.emit(Handler.Events.ProbeResult, cookiesResult);
+                            this.emit(Handler.Events.Finished, 0, status);
+
+                            interceptedRequest.abort();
+                        });
                 } else {
                     interceptedRequest.continue();
                 }
+
             });
 
+            this._page.on('response', response => {
+                if (_isRedirect(response)) {
+                    this._lastRedirectResponse = response;
+                }
+            });
 
             this._page.on('dialog', dialog => {
                 //DEBUG:
@@ -102,7 +125,7 @@
 
             // set function to return value from probe
             this._page.exposeFunction('__PROBE_FN_RETURN_REQUEST__', (request) => {
-                this.emit(Handler.Events.ProbeRequest, request);
+                this.emit(Handler.Events.ProbeResult, request);
             });
 
             // set function to request end from probe
@@ -145,9 +168,13 @@
         }
     }
 
+    function _isRedirect(response) {
+        return [301, 302, 303, 307, 308].includes(response.status) && response.request().resourceType === 'document';
+    }
+
     Handler.Events = {
         Finished: 'finished',
-        ProbeRequest: 'probeRequest',
+        ProbeResult: 'probeResult',
     };
 
     exports.Handler = Handler;

@@ -68,8 +68,8 @@
             _requestJobEnd(exitCode);
         });
 
-        handler.on('probeRequest', (request) => {
-            result.push(request);
+        handler.on('probeResult', (newResult) => {
+            result.push(newResult);
         });
 
         handler.initialize()
