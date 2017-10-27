@@ -1,15 +1,13 @@
 /**
  * @todo (blocked):
- * - make possible to send POST request and custom headers (set a referer) on page.goto() see: {@link https://github.com/GoogleChrome/puppeteer/issues/1062}
- *   possible workaround: using `request.continue({overrides})` on the first request
+ * - make possible to send custom headers (set a referer) on page.goto() see: {@link https://github.com/GoogleChrome/puppeteer/issues/1062}
+ *     and {@link https://github.com/GoogleChrome/puppeteer/issues/686}
  * - block navigation away and return content related to "navigationRequest" as in PhantomJS see: {@link https://github.com/GoogleChrome/puppeteer/issues/823}
  *   possible workaround: watching `onunload` page event to prevent navigation
- * - handle redirect see: {@link https://github.com/GoogleChrome/puppeteer/issues/1132}
- *   possible workaround: blocking the request with `request.status === 30x`
  *
  * @todo (nice to have):
  * - add a debug level
- * - return cookies for every request
+ * - store headers for every request (mainly cookies and referrer) to enable a better "replay"
  * - also analyse the error pages (40x and 50x)
  */
 

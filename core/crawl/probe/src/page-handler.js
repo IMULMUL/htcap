@@ -2,10 +2,10 @@
     'use strict';
 
     const EventEmitter = require('events');
-
+    //DEBUG:
     // const logger = require('../logger');
 
-    const setProbe = require('./probe').setProbe;
+    const probe = require('./probe');
 
     /**
      *
@@ -49,18 +49,21 @@
             this._constants = constants;
             this._options = options;
             this._lastRedirectResponse = undefined;
+            this._reformatFirstRequest = (options.referer || options.sendPOST);
         }
 
         initialize() {
             this._page.on('request', interceptedRequest => {
-                // //DEBUG:
+                //DEBUG:
                 // logger.debug(`intercepted request: ${interceptedRequest.resourceType} ${interceptedRequest.url}`);
 
                 // block image loading
                 if (interceptedRequest.resourceType === 'image') {
                     interceptedRequest.abort();
 
-                    // block redirect
+                    // Block redirect
+                    // Since no option exist in puppeteer, this is the workaround proposed here:
+                    // https://github.com/GoogleChrome/puppeteer/issues/1132#issuecomment-339420642
                 } else if (this._lastRedirectResponse && this._lastRedirectResponse.headers.location === interceptedRequest.url) {
                     this.getCookies()
                         .then(cookies => {
@@ -72,6 +75,25 @@
 
                             interceptedRequest.abort();
                         });
+                    // Set the first request as POST or/and Headers
+                } else if (this._reformatFirstRequest) {
+
+                    let overrides = {};
+
+                    if (this._options.sendPOST) {
+                        overrides.method = 'POST';
+                        overrides.postData = this._options.POSTData || undefined;
+                    }
+
+                    if (this._options.referer) {
+                        overrides.headers = {'Referer': this._options.referer};
+                    }
+
+                    interceptedRequest.continue(overrides)
+                        .then(() => {
+                            this._reformatFirstRequest = false;
+                        });
+
                 } else {
                     interceptedRequest.continue();
                 }
@@ -151,7 +173,7 @@
 
         _setProbe() {
             // on every new document, initializing the probe into the page context
-            this._page.evaluateOnNewDocument(setProbe, ...[this._options, this._constants]);
+            this._page.evaluateOnNewDocument(probe.setProbe, ...[this._options, this._constants]);
         }
 
         startProbe() {
@@ -168,14 +190,14 @@
         }
     }
 
-    function _isRedirect(response) {
-        return [301, 302, 303, 307, 308].includes(response.status) && response.request().resourceType === 'document';
-    }
-
     Handler.Events = {
         Finished: 'finished',
         ProbeResult: 'probeResult',
     };
+
+    function _isRedirect(response) {
+        return [301, 302, 303, 307, 308].includes(response.status) && response.request().resourceType === 'document';
+    }
 
     exports.Handler = Handler;
 
