@@ -10,9 +10,9 @@
 
 // var system = require('system');
 // var fs = require('fs');
-var page = require('webpage')
-    .create();
-
+// var page = require('webpage')
+//     .create();
+let page = {}, options = {}, headers = {};
 // window.page = page;
 // window.fs = fs;
 
@@ -263,7 +263,7 @@ if (options.referer) {
 // assertContentTypeHtml(response);
 //
 // phantom.exit(1);
-}
+// }
 
 
 // printCookies();
