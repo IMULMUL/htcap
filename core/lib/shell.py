@@ -44,7 +44,6 @@ class CommandExecutor:
                 self.process = subprocess.Popen(self.cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, bufsize=0,
                                                 close_fds=sys.platform != "win32")
                 self.out, self.err = self.process.communicate()
-                self.result = json.loads(self.out)
 
             except Exception as e:
                 raise
@@ -59,4 +58,4 @@ class CommandExecutor:
             self.out = None
             self.err = "Executor: execution timeout"
 
-        return self.result['message'] if not self.stderr else (self.out, self.err)
+        return self.out if not self.stderr else (self.out, self.err)

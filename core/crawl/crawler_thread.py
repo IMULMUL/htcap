@@ -175,7 +175,8 @@ class CrawlerThread(threading.Thread):
         while retries:
 
             cmd = CommandExecutor(Shared.probe_cmd + params)
-            jsn = cmd.execute(Shared.options['process_timeout'] + 2)
+            out = cmd.execute(Shared.options['process_timeout'] + 2)
+            jsn = json.loads(out)['message']
 
             if jsn is None:
                 errors.append(ERROR_PROBEKILLED)
