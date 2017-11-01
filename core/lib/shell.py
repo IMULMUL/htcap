@@ -13,7 +13,9 @@ version.
 import subprocess
 import sys
 import threading
-import json
+import time
+import signal
+
 
 class CommandExecutor:
     """
@@ -31,9 +33,27 @@ class CommandExecutor:
         self.thread = None
         self.result = None
 
-    def kill(self):
+    def close(self, kill_timeout):
+        tries = 0
+        self.process.send_signal(signal.SIGTERM)
+        while tries < kill_timeout:
+            if self.process.poll() is None:
+                try:
+                    self.out, self.err = self.process.communicate()
+                    self.thread.join()
+                    return
+                except:
+                    self.thread.join()
+                    self.out = None
+                    self.err = "Executor: process terminated with errors"
+                    return
+            else:
+                time.sleep(1)
+                tries += 1
         self.process.kill()
         self.thread.join()
+        self.out = None
+        self.err = "Executor: execution timeout"
 
     def execute(self, timeout):
 
@@ -44,7 +64,6 @@ class CommandExecutor:
                 self.process = subprocess.Popen(self.cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, bufsize=0,
                                                 close_fds=sys.platform != "win32")
                 self.out, self.err = self.process.communicate()
-
             except Exception as e:
                 raise
 
@@ -54,8 +73,6 @@ class CommandExecutor:
         self.thread.join(int(timeout))
 
         if self.thread.is_alive():
-            self.kill()
-            self.out = None
-            self.err = "Executor: execution timeout"
+            self.close(5)
 
         return self.out if not self.stderr else (self.out, self.err)
