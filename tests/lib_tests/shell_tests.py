@@ -18,7 +18,7 @@ class ExecutorTest(unittest.TestCase):
 
 
     def test_command_timeout_with_results(self):
-        cmd = ['sleep', '10', '&& echo ""foo"']
+        cmd = ['sleep', '10']
         executor = CommandExecutor(cmd)
         result = executor.execute(1)
 
