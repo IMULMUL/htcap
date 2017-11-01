@@ -14,7 +14,6 @@ import subprocess
 import sys
 import threading
 import time
-import signal
 
 
 class CommandExecutor:
@@ -35,18 +34,10 @@ class CommandExecutor:
 
     def close(self, kill_timeout):
         tries = 0
-        self.process.send_signal(signal.SIGTERM)
+        self.process.terminate()
         while tries < kill_timeout:
-            if self.process.poll() is None:
-                try:
-                    self.out, self.err = self.process.communicate()
-                    self.thread.join()
-                    return
-                except:
-                    self.thread.join()
-                    self.out = None
-                    self.err = "Executor: process terminated with errors"
-                    return
+            if self.process.poll() is not None:
+                return
             else:
                 time.sleep(1)
                 tries += 1
