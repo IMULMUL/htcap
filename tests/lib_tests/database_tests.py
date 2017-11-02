@@ -149,7 +149,6 @@ class DatabaseTest(DatabaseTestCase):
         request.http_auth = None
         request.out_of_scope = False
         request.trigger = None
-        request.html = None
         request.user_output = []
 
         self.cursor_mock.fetchone.side_effect = fetchone_side_effect
@@ -167,11 +166,11 @@ class DatabaseTest(DatabaseTestCase):
         self.assertEqual(
             self.cursor_mock.execute.call_args_list[1],
             call(
-                'INSERT INTO request (id_parent, type, method, url, referer, redirects, data, cookies, http_auth, out_of_scope, trigger, html, user_output) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                'INSERT INTO request (id_parent, type, method, url, referer, redirects, data, cookies, http_auth, out_of_scope, trigger, user_output) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
                 (
                     None, "request type", "METHOD", "my url", "some referrer", "some redirection", "some data", "[]",
                     "", 0,
-                    "", "", "")
+                    "", "")
             )
         )
         self.assertEqual(
@@ -229,30 +228,28 @@ class DatabaseTest(DatabaseTestCase):
         result = MagicMock()
         result.errors = []
         result.request = MagicMock()
-        result.request.html = None
         result.request.user_output = []
         result.request.db_id = 42
 
         self.db.save_crawl_result(result=result, crawled=None)
 
         self.cursor_mock.execute.assert_called_once_with(
-            "UPDATE request SET crawled=?, crawler_errors=?, html=?, user_output=? WHERE id=?",
-            (0, "[]", "", "", 42)
+            "UPDATE request SET crawled=?, crawler_errors=?, user_output=? WHERE id=?",
+            (0, "[]", "", 42)
         )
 
     def test_save_crawl_result_crawled(self):
         result = MagicMock()
         result.errors = ["some", "errors"]
         result.request = MagicMock()
-        result.request.html = "<html></html>"
         result.request.user_output = ["some", "outputs"]
         result.request.db_id = 42
 
         self.db.save_crawl_result(result=result, crawled=True)
 
         self.cursor_mock.execute.assert_called_once_with(
-            "UPDATE request SET crawled=?, crawler_errors=?, html=?, user_output=? WHERE id=?",
-            (1, '["some", "errors"]', "<html></html>", '["some", "outputs"]', 42)
+            "UPDATE request SET crawled=?, crawler_errors=?, user_output=? WHERE id=?",
+            (1, '["some", "errors"]', '["some", "outputs"]', 42)
         )
 
     def test_make_request_crawlable(self):

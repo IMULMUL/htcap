@@ -30,6 +30,8 @@ from core.lib.shell import CommandExecutor
 
 
 # TODO: use NamedTemporaryFile for self._cookie_file
+# from core.lib.utils import cmd_to_str
+
 
 class CrawlerThread(threading.Thread):
     _PROCESS_RETRIES_INTERVAL = 0.5
@@ -69,6 +71,7 @@ class CrawlerThread(threading.Thread):
                 if probe.status == "ok" or probe.errcode == ERROR_PROBE_TO:
 
                     requests = probe.requests
+
                     # CHECK 1 HERE
                     if probe.html:
                         request.html = probe.html
@@ -128,7 +131,9 @@ class CrawlerThread(threading.Thread):
 
     @staticmethod
     def _load_probe_json(jsn):
-        jsn = jsn.strip()
+
+        # jsn = jsn.strip()
+
         if not jsn:
             jsn = "["
         if jsn[-1] != "]":
@@ -139,13 +144,10 @@ class CrawlerThread(threading.Thread):
             # print "-- JSON DECODE ERROR %s" % jsn
             raise
 
-    def _send_probe(self, request, errors):
-
-        url = request.url
-        probe = None
-        retries = CrawlerThread._PROCESS_RETRIES
+    def _set_probe_params(self, request):
         params = []
         cookies = []
+        url = request.url
 
         if request.method == "POST":
             params.append("-P")
@@ -155,10 +157,8 @@ class CrawlerThread(threading.Thread):
         if len(request.cookies) > 0:
             for cookie in request.cookies:
                 cookies.append(cookie.get_dict())
-
             with open(self._cookie_file, 'w') as fil:
                 fil.write(json.dumps(cookies))
-
             params.extend(("-c", self._cookie_file))
 
         if request.http_auth:
@@ -167,25 +167,34 @@ class CrawlerThread(threading.Thread):
         if Shared.options['set_referer'] and request.referer:
             params.extend(("-r", request.referer))
 
-        params.extend(("-i", str(request.db_id)))
-
         params.append(url)
+
+        return params
+
+    def _send_probe(self, request, errors):
+
+        probe = None
+        retries = CrawlerThread._PROCESS_RETRIES
+        params = self._set_probe_params(request)
 
         while retries:
 
-            # print cmd_to_str(Shared.probe_cmd + params)
-
             cmd = CommandExecutor(Shared.probe_cmd + params)
-            jsn = cmd.execute(Shared.options['process_timeout'] + 2)
+            out = cmd.execute(Shared.options['process_timeout'] + 2)
+            try:
+                jsn = json.loads(out)['message']
+            except Exception:
+                print("Probe error")
+                raise
 
             if jsn is None:
-                errors.appnd(ERROR_PROBEKILLED)
+                errors.append(ERROR_PROBEKILLED)
                 sleep(CrawlerThread._PROCESS_RETRIES_INTERVAL)  # ... ???
                 retries -= 1
                 continue
 
             # try to decode json also after an exception .. sometimes phantom crashes BUT returns a valid json ..
-            if jsn and type(jsn) is not str:
+            if jsn and type(jsn) is not unicode:
                 jsn = jsn[0]
             probe_array = self._load_probe_json(jsn)
 
@@ -197,10 +206,9 @@ class CrawlerThread(threading.Thread):
 
                 errors.append(probe.errcode)
 
-                if probe.errcode in (ERROR_CONTENTTYPE, ERROR_PROBE_TO):
+                if probe.errcode in (ERROR_CONTENTTYPE, ERROR_PROBE_TO, ERROR_FORCE_STOP):
                     break
 
             sleep(CrawlerThread._PROCESS_RETRIES_INTERVAL)
             retries -= 1
-
         return probe

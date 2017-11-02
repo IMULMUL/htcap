@@ -1,18 +1,19 @@
-# -*- coding: utf-8 -*- 
+# -*- coding: utf-8 -*-
 
 """
 HTCAP - beta 1
 Author: filippo.cavallarin@wearesegment.com
 
-This program is free software; you can redistribute it and/or modify it under 
-the terms of the GNU General Public License as published by the Free Software 
-Foundation; either version 2 of the License, or (at your option) any later 
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; either version 2 of the License, or (at your option) any later
 version.
 """
 
 import subprocess
 import sys
 import threading
+import time
 
 
 class CommandExecutor:
@@ -29,20 +30,31 @@ class CommandExecutor:
         self.err = None
         self.process = None
         self.thread = None
+        self.result = None
 
-    def kill(self):
+    def close(self, kill_timeout):
+        tries = 0
+        self.process.terminate()
+        while tries < kill_timeout:
+            if self.process.poll() is not None:
+                return
+            else:
+                time.sleep(1)
+                tries += 1
         self.process.kill()
         self.thread.join()
+        self.out = None
+        self.err = "Executor: execution timeout"
 
     def execute(self, timeout):
 
         def executor():
             try:
                 # close_fds=True is needed in threaded programs
+
                 self.process = subprocess.Popen(self.cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, bufsize=0,
                                                 close_fds=sys.platform != "win32")
                 self.out, self.err = self.process.communicate()
-
             except Exception as e:
                 raise
 
@@ -52,8 +64,6 @@ class CommandExecutor:
         self.thread.join(int(timeout))
 
         if self.thread.is_alive():
-            self.kill()
-            self.out = None
-            self.err = "Executor: execution timeout"
+            self.close(5)
 
         return self.out if not self.stderr else (self.out, self.err)

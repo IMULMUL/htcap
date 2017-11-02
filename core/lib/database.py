@@ -141,10 +141,9 @@ class Database:
             request.http_auth if request.http_auth else "",
             1 if request.out_of_scope else 0,
             json.dumps(request.trigger) if request.trigger else "",
-            request.html if request.html else "",
             json.dumps(request.user_output) if len(request.user_output) > 0 else ""
         )
-        insert_query = "INSERT INTO request (id_parent, type, method, url, referer, redirects, data, cookies, http_auth, out_of_scope, trigger, html, user_output) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
+        insert_query = "INSERT INTO request (id_parent, type, method, url, referer, redirects, data, cookies, http_auth, out_of_scope, trigger, user_output) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
 
         # ignore referrer and cookies.. correct?
         select_values = (
@@ -185,11 +184,10 @@ class Database:
         :param result: result to save
         :param crawled: (boolean) have been crawled
         """
-        qry = "UPDATE request SET crawled=?, crawler_errors=?, html=?, user_output=? WHERE id=?"
+        qry = "UPDATE request SET crawled=?, crawler_errors=?, user_output=? WHERE id=?"
         values = (
             1 if crawled else 0,
             json.dumps(result.errors),
-            result.request.html if result.request.html else "",
             json.dumps(result.request.user_output) if len(result.request.user_output) > 0 else "",
             result.request.db_id
         )
@@ -381,7 +379,6 @@ CREATE TABLE request (
     trigger TEXT,
     crawled INTEGER NOT NULL DEFAULT 0,
     crawler_errors TEXT,
-    html TEXT,
     user_output TEXT
 )
 """

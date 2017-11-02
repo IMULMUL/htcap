@@ -1,12 +1,12 @@
-# -*- coding: utf-8 -*- 
+# -*- coding: utf-8 -*-
 
 """
 HTCAP - beta 1
 Author: filippo.cavallarin@wearesegment.com
 
-This program is free software; you can redistribute it and/or modify it under 
-the terms of the GNU General Public License as published by the Free Software 
-Foundation; either version 2 of the License, or (at your option) any later 
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; either version 2 of the License, or (at your option) any later
 version.
 """
 
@@ -37,7 +37,7 @@ REQTYPE_UNKNOWN = "unknown"
 ERROR_CONTENTTYPE = "contentType"
 ERROR_TIMEOUT = "timeout"
 ERROR_PROBE_TO = "probe_timeout"
-ERROR_LOAD = "loaderror"
+ERROR_FORCE_STOP = "interruptReceived"
 ERROR_PROBEKILLED = "probe_killed"
 ERROR_PROBEFAILURE = "probe_failure"
 ERROR_MAXREDIRECTS = "too_many_redirects"
@@ -58,7 +58,6 @@ CRAWLER_DEFAULTS = {
     "group_qs": False,
     "user_agent": 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 '
                   '(KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36',
-    "save_html": False,
     "override_timeout_functions": True,
     "crawl_forms": True,  # only if mode == CRAWLMODE_AGGRESSIVE
     "random_seed": "",

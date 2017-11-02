@@ -46,7 +46,8 @@ if __name__ == '__main__':
 		sys.exit(1)
 
 	elif sys.argv[1] == "crawl":
-		Crawler(sys.argv[2:])
+		crawler = Crawler(sys.argv[2:])
+		crawler.run()
 	elif sys.argv[1] == "scan":
 		Scanner(sys.argv[2:])
 	elif sys.argv[1] == "util":
