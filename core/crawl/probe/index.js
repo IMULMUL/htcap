@@ -31,8 +31,8 @@
 
     let startTime = new Date();
 
-    // handling SIGINT signal
-    process.on('SIGINT', () => {
+    // handling SIGTERM signal
+    process.on('SIGTERM', () => {
         result.push({'status': 'error', 'code': 'interruptReceived'});
         _requestJobEnd();
     });
