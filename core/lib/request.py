@@ -102,6 +102,14 @@ class Request(object):
         self._html = value
         self._html_hash = Simhash(value)
 
+    @property
+    def hash(self):
+        return self._html_hash
+
+    @hash.setter
+    def hash(self, value):
+        self._html_hash = Simhash(value)
+
     def get_dict(self):
         return dict(
             type=self.type,

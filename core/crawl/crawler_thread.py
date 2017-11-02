@@ -72,14 +72,14 @@ class CrawlerThread(threading.Thread):
 
                     requests = probe.requests
 
-                    # CHECK 1 HERE
                     if probe.html:
-                        request.html = probe.html
+                        request.hash = probe.html
+                        print(request.hash)
 
                     if len(probe.user_output) > 0:
                         request.user_output = probe.user_output
 
-                    # if the probe return some cookies set it has the last one
+                    # if the probe return some cookies set it as the last one
                     if probe.cookies:
                         Shared.end_cookies = probe.cookies
 
@@ -92,6 +92,7 @@ class CrawlerThread(threading.Thread):
                     hr = HttpGet(request, Shared.options['process_timeout'], CrawlerThread._PROCESS_RETRIES,
                                  Shared.options['user_agent'], Shared.options['proxy'])
                     requests = hr.get_requests()
+
                 except Exception as e:
                     errors.append(str(e))
 

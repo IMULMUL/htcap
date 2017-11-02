@@ -75,6 +75,7 @@ class Crawler:
         self._initial_checks = True
         self._http_auth = None
         self._get_robots_txt = True
+        self._block_duplicates = False
 
         # initialize probe
         self._probe = {
@@ -127,6 +128,7 @@ Options:
   -O              don't override timeout functions (setTimeout, setInterval)
   -K              keep elements in the DOM (prevent removal)
   -e SEED         seed used to generate strings during crawl
+  -b              block duplicate content and near-duplicates.
 """.format(
             version=get_program_infos()['version'],
             crawl_output_rename=CRAWLOUTPUT_RENAME,
@@ -165,7 +167,7 @@ Options:
 
         # retrieving user arguments
         try:
-            opts, args = getopt.getopt(self.arg, 'ho:qvm:s:D:P:Fd:c:C:r:x:p:n:A:U:t:SGNR:IOKe:')
+            opts, args = getopt.getopt(self.arg, 'ho:qvm:s:D:P:Fd:c:C:r:x:p:n:A:U:t:SGNR:IOKe:b')
         except getopt.GetoptError as err:
             print(str(err))
             self._usage()
@@ -253,6 +255,8 @@ Options:
                 self._verbose = True
             elif o == "-e":  # seed for random value
                 Shared.options["random_seed"] = v
+            elif o == "-b":  # block duplicates and near-duplicates
+                self._block_duplicates = True
 
         # warn about -d option in domain scope mode
         if Shared.options['scope'] != CRAWLSCOPE_DOMAIN and len(Shared.allowed_domains) > 0:
@@ -470,26 +474,26 @@ Options:
                             if verbose:
                                 print("  new request found %s" % req)
 
-                            database.save_request(req)
-                                # CHECK 2 HERE
-                            if request_is_crawlable(req) and req not in Shared.requests and req not in req_to_crawl:
-                                if request_depth(req) > Shared.options['max_depth'] or request_post_depth(req) > \
-                                        Shared.options['max_post_depth']:
-                                    if verbose:
-                                        print("  * cannot crawl: %s : crawl depth limit reached" % req)
-                                    result = CrawlResult(req, errors=[ERROR_CRAWLDEPTH])
-                                    database.save_crawl_result(result, False)
-                                    continue
+                            if not (self._block_duplicates and self._is_duplicate(req)):
+                                database.save_request(req)
+                                if request_is_crawlable(req) and req not in Shared.requests and req not in req_to_crawl:
+                                    if request_depth(req) > Shared.options['max_depth'] or request_post_depth(req) > \
+                                            Shared.options['max_post_depth']:
+                                        if verbose:
+                                            print("  * cannot crawl: %s : crawl depth limit reached" % req)
+                                        result = CrawlResult(req, errors=[ERROR_CRAWLDEPTH])
+                                        database.save_crawl_result(result, False)
+                                        continue
 
-                                if req.redirects > Shared.options['max_redirects']:
-                                    if verbose:
-                                        print("  * cannot crawl: %s : too many redirects" % req)
-                                    result = CrawlResult(req, errors=[ERROR_MAXREDIRECTS])
-                                    database.save_crawl_result(result, False)
-                                    continue
+                                    if req.redirects > Shared.options['max_redirects']:
+                                        if verbose:
+                                            print("  * cannot crawl: %s : too many redirects" % req)
+                                        result = CrawlResult(req, errors=[ERROR_MAXREDIRECTS])
+                                        database.save_crawl_result(result, False)
+                                        continue
 
-                                pending += 1
-                                req_to_crawl.append(req)
+                                    pending += 1
+                                    req_to_crawl.append(req)
 
                     Shared.crawl_results = []
                     database.commit()
@@ -504,6 +508,13 @@ Options:
             except Exception as e:
                 print(str(e))
                 pass
+
+    # def _is_duplicate(self, request):
+    #     # compare request.hash against every other ones, return False if it is not close enough to anyone's hash.
+    #     for candidate in REQUESTS:
+    #         if (cadidate.hash - req.hash)  < t:
+    #             return True
+    #     return False
 
     def _set_probe(self):
         """
