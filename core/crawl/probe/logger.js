@@ -10,7 +10,7 @@
                     filename: __dirname + '/debug.log',
                     prettyPrint: true,
                     timestamp: true,
-                    colorize: true,
+                    json: false,
                 },
             ),
             new (winston.transports.Console)(
