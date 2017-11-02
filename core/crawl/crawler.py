@@ -485,7 +485,7 @@ Options:
                                 print("  new request found %s" % req)
 
                             database.save_request(req)
-
+                                # CHECK 2 HERE
                             if request_is_crawlable(req) and req not in Shared.requests and req not in req_to_crawl:
                                 if request_depth(req) > Shared.options['max_depth'] or request_post_depth(req) > \
                                         Shared.options['max_post_depth']:

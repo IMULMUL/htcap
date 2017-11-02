@@ -69,7 +69,7 @@ class CrawlerThread(threading.Thread):
                 if probe.status == "ok" or probe.errcode == ERROR_PROBE_TO:
 
                     requests = probe.requests
-
+                    # CHECK 1 HERE
                     if probe.html:
                         request.html = probe.html
 
