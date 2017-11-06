@@ -167,11 +167,8 @@ class CrawlerThread(threading.Thread):
                 sleep(CrawlerThread._PROCESS_RETRIES_INTERVAL)  # ... ???
                 retries -= 1
                 continue
-
-            # try to decode json also after an exception .. sometimes phantom crashes BUT returns a valid json ..
-            if jsn and type(jsn) is not str:
-                jsn = jsn[0]
-            probe_array = self._load_probe_json(jsn)
+            else:
+                probe_array = self._load_probe_json(jsn)
 
             if probe_array:
                 probe = Probe(probe_array, request)
@@ -191,16 +188,14 @@ class CrawlerThread(threading.Thread):
     @staticmethod
     def _load_probe_json(jsn):
 
-        if not jsn:
-            jsn = """{ 
-                  "message":"[" 
-                  }"""
+        if isinstance(jsn, tuple):
+            jsn = jsn[0]
+
         try:
             jsn1 = json.loads(jsn)
-            if jsn1["message"][-1] != "]":
-                jsn1["message"] += '{"status":"ok", "partialcontent":true}]'
             data = json.loads(jsn1['message'])
             return data
-        except Exception:
+        except ValueError:
             print "-- JSON DECODE ERROR %s" % jsn
+        except Exception:
             raise
