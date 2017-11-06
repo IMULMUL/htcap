@@ -160,7 +160,7 @@ class CrawlerThread(threading.Thread):
         params = self._set_probe_params(request)
 
         while retries:
-            print("sending probe to :" + params[-1])
+
             cmd = CommandExecutor(Shared.probe_cmd + params)
             jsn = cmd.execute(Shared.options['process_timeout'] + 2)
 

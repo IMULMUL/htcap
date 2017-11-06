@@ -25,11 +25,9 @@ class Request(object):
                  set_cookie=None, http_auth=None, db_id=None, parent_db_id=None, out_of_scope=None, html=None):
         self.type = type
         self.method = method
-        self._html = None
-        self._html_hash = Simhash(html) if html is not None else Simhash(self.url)
         self.user_output = []
-        url = url.strip()
 
+        url = url.strip()
         try:
             url = url.decode("utf-8")
         except:
@@ -54,7 +52,8 @@ class Request(object):
 
         # parent is the parent request that can be a redirect, referer is the referer page (ahead of redirects)
         self._parent = parent
-
+        self._html = None
+        self._html_hash = Simhash(html) if html is not None else Simhash(self.url)
         self.data = data if data else ""
         self.trigger = trigger
         self.db_id = db_id

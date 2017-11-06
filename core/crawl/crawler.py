@@ -508,7 +508,7 @@ Options:
                 d = Simhash(crawled_hash).distance(request.hash)
                 if d in range(1, 6):
                     print("Catched near duplicate value for :" + request.url)
-                    print("with distance: ", Simhash(crawled_hash).distance(request.hash))
+                    print("with distance: " + str(Simhash(crawled_hash).distance(request.hash)))
                     Shared.hash_bucket.append(request.hash)
                     return True
             Shared.hash_bucket.append(request.hash)
