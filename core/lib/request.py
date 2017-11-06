@@ -22,11 +22,11 @@ from core.lib.utils import extract_http_auth, normalize_url, remove_tokens
 
 class Request(object):
     def __init__(self, type, method, url, parent=None, referer=None, data=None, trigger=None, json_cookies=None,
-                 set_cookie=None, http_auth=None, db_id=None, parent_db_id=None, out_of_scope=None):
+                 set_cookie=None, http_auth=None, db_id=None, parent_db_id=None, out_of_scope=None, html=None):
         self.type = type
         self.method = method
         self._html = None
-        self._html_hash = None
+        self._html_hash = Simhash(html) if html is not None else Simhash(self.url)
         self.user_output = []
         url = url.strip()
 

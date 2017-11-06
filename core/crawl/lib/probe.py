@@ -24,7 +24,6 @@ class Probe:
         # if True the probe returned no error BUT the json is not closed properly
         self.partialcontent = False
         self.user_output = []
-        self.html = None
         status = data.pop()
 
         if status['status'] == "error":
@@ -54,9 +53,5 @@ class Probe:
                 self.requests.append(r)
             elif key == "user":
                 self.user_output.append(val)
-            elif key == "html":
-                self.html = val
-
-
 
             # @TODO handle cookies set by ajax (in probe too)

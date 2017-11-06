@@ -40,6 +40,7 @@ from core.lib.request import Request
 from core.lib.shell import CommandExecutor
 from core.lib.utils import get_program_infos, getrealdir, print_progressbar, stdoutw, \
     get_probe_cmd, normalize_url, cmd_to_str, generate_filename
+from core.lib.thirdparty.simhash import Simhash
 
 
 # TODO: clean the exception handling (no more `except Exception:`)
@@ -338,16 +339,6 @@ Options:
             REQTYPE_LINK, "GET", Shared.start_url, set_cookie=Shared.start_cookies,
             http_auth=self._http_auth, referer=self._start_referer)
 
-        def _is_not_in_past_requests(request):
-            """
-            check if the given request is present in Shared.requests or start_requests
-            """
-            is_in_request = True
-            for r in Shared.requests + start_requests:
-                if r == request:
-                    is_in_request = False
-            return is_in_request
-
         # check starting url
         if self._initial_checks:
             try:
@@ -375,7 +366,7 @@ Options:
                     start_requests.extend(database.get_not_crawled_request())
 
                 # if request from args is neither in past or future requests
-                if _is_not_in_past_requests(start_request_from_args):
+                if self._is_not_in_past_requests(start_request_from_args):
                     start_requests.append(start_request_from_args)
             except Exception as e:
                 print(str(e))
@@ -387,7 +378,7 @@ Options:
         if self._get_robots_txt:
             try:
                 start_requests.extend(
-                    filter(_is_not_in_past_requests, self._get_requests_from_robots(start_request_from_args))
+                    filter(self._is_not_in_past_requests, self._get_requests_from_robots(start_request_from_args))
                 )
             except KeyboardInterrupt:
                 print("\nAborted")
@@ -429,7 +420,6 @@ Options:
     def _main_loop(self, threads, start_requests, database, display_progress=True, verbose=False):
         pending = len(start_requests)
         crawled = 0
-
         req_to_crawl = start_requests
         try:
             while True:
@@ -471,29 +461,31 @@ Options:
                         database.save_crawl_result(result, True)
                         for req in result.found_requests:
 
-                            if verbose:
-                                print("  new request found %s" % req)
-
+                            # Main condition for duplicate checking
                             if not (self._block_duplicates and self._is_duplicate(req)):
-                                database.save_request(req)
-                                if request_is_crawlable(req) and req not in Shared.requests and req not in req_to_crawl:
-                                    if request_depth(req) > Shared.options['max_depth'] or request_post_depth(req) > \
-                                            Shared.options['max_post_depth']:
-                                        if verbose:
-                                            print("  * cannot crawl: %s : crawl depth limit reached" % req)
-                                        result = CrawlResult(req, errors=[ERROR_CRAWLDEPTH])
-                                        database.save_crawl_result(result, False)
-                                        continue
 
-                                    if req.redirects > Shared.options['max_redirects']:
-                                        if verbose:
-                                            print("  * cannot crawl: %s : too many redirects" % req)
-                                        result = CrawlResult(req, errors=[ERROR_MAXREDIRECTS])
-                                        database.save_crawl_result(result, False)
-                                        continue
+                                if verbose:
+                                    print("  new request found %s" % req)
 
-                                    pending += 1
-                                    req_to_crawl.append(req)
+                                    database.save_request(req)
+                                    if request_is_crawlable(req) and req not in Shared.requests and req not in req_to_crawl:
+                                        if request_depth(req) > Shared.options['max_depth'] or request_post_depth(req) > \
+                                                Shared.options['max_post_depth']:
+                                            if verbose:
+                                                print("  * cannot crawl: %s : crawl depth limit reached" % req)
+                                            result = CrawlResult(req, errors=[ERROR_CRAWLDEPTH])
+                                            database.save_crawl_result(result, False)
+                                            continue
+
+                                        if req.redirects > Shared.options['max_redirects']:
+                                            if verbose:
+                                                print("  * cannot crawl: %s : too many redirects" % req)
+                                            result = CrawlResult(req, errors=[ERROR_MAXREDIRECTS])
+                                            database.save_crawl_result(result, False)
+                                            continue
+
+                                        pending += 1
+                                        req_to_crawl.append(req)
 
                     Shared.crawl_results = []
                     database.commit()
@@ -509,12 +501,18 @@ Options:
                 print(str(e))
                 pass
 
-    # def _is_duplicate(self, request):
-    #     # compare request.hash against every other ones, return False if it is not close enough to anyone's hash.
-    #     for candidate in REQUESTS:
-    #         if (cadidate.hash - req.hash)  < t:
-    #             return True
-    #     return False
+    def _is_duplicate(self, request):
+        # compare request.hash against every other ones, return False if it is not close enough to anyone's hash.
+        if request.hash is not None:
+            for crawled_hash in Shared.hash_bucket:
+                d = Simhash(crawled_hash).distance(request.hash)
+                if d in range(1, 6):
+                    print("Catched near duplicate value for :" + request.url)
+                    print("with distance: ", Simhash(crawled_hash).distance(request.hash))
+                    Shared.hash_bucket.append(request.hash)
+                    return True
+            Shared.hash_bucket.append(request.hash)
+        return False
 
     def _set_probe(self):
         """
@@ -655,3 +653,13 @@ Options:
             database.initialize()
 
         return database
+
+    def _is_not_in_past_requests(request):
+        """
+        check if the given request is present in Shared.requests or start_requests
+        """
+        is_in_request = True
+        for r in Shared.requests + start_requests:
+            if r == request:
+                is_in_request = False
+        return is_in_request

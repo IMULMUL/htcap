@@ -37,3 +37,5 @@ class Shared:
     probe_cmd = []
 
     options = {}
+
+    hash_bucket = []

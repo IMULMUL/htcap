@@ -72,10 +72,6 @@ class CrawlerThread(threading.Thread):
 
                     requests = probe.requests
 
-                    if probe.html:
-                        request.hash = probe.html
-                        print(request.hash)
-
                     if len(probe.user_output) > 0:
                         request.user_output = probe.user_output
 
@@ -164,7 +160,7 @@ class CrawlerThread(threading.Thread):
         params = self._set_probe_params(request)
 
         while retries:
-
+            print("sending probe to :" + params[-1])
             cmd = CommandExecutor(Shared.probe_cmd + params)
             jsn = cmd.execute(Shared.options['process_timeout'] + 2)
 
@@ -193,7 +189,6 @@ class CrawlerThread(threading.Thread):
 
     @staticmethod
     def _load_probe_json(jsn):
-
         if isinstance(jsn, tuple):
             jsn = jsn[0]
 
