@@ -40,7 +40,7 @@
     function _requestJobEnd(exitCode) {
 
         //DEBUG:
-        // logger.debug('closing Node process');
+        logger.debug('closing Node process');
 
         logger.log('debug', `${result.length} results in ${(Date.now() - startTime) / 1000} sec : ${JSON.stringify(result)}`);
         logger.log('info', `${JSON.stringify(result)}`);
@@ -87,7 +87,7 @@
                                         });
 
                                 // DEBUG:
-                                // logger.debug('starting the probe');
+                                logger.debug('starting the probe');
                                 // start analysis on the page
                                 handler.startProbe();
                             } else {

@@ -3,7 +3,7 @@
 
     const EventEmitter = require('events');
     //DEBUG:
-    // const logger = require('../logger');
+    const logger = require('../logger');
 
     const probe = require('./probe');
 
@@ -78,7 +78,7 @@
                     // Set the first request as POST or/and Headers
                 } else if (this._reformatFirstRequest) {
 
-                    let overrides = {};
+                    let overrides = {headers: interceptedRequest.headers};
 
                     if (this._options.sendPOST) {
                         overrides.method = 'POST';
@@ -86,7 +86,7 @@
                     }
 
                     if (this._options.referer) {
-                        overrides.headers = {'Referer': this._options.referer};
+                        overrides.headers['Referer'] = this._options.referer;
                     }
 
                     interceptedRequest.continue(overrides)
@@ -123,15 +123,15 @@
 
             this._page.on('error', error => {
                 //DEBUG:
-                // logger.debug(`Page crash: "${error.code}", "${error.message()}"`);
+                logger.debug(`Page crash: "${error.code}", "${error.message()}"`);
                 let status = {'status': 'error', 'code': 'pageCrash', 'message': `Page crash with: "${error.code}", "${error.message()}"`};
                 this.emit(Handler.Events.Finished, 1, status);
             });
 
             // //DEBUG:
-            // this._page.on('console', consoleMessage => {
-            //     logger.debug(`Page console message, type "${consoleMessage.type}": "${consoleMessage.text}"`);
-            // });
+            this._page.on('console', consoleMessage => {
+                logger.debug(`Page console message, type "${consoleMessage.type}": "${consoleMessage.text}"`);
+            });
             // //DEBUG:
             // this._page.on('frameattached', frameTo => {
             //     logger.debug(`frameattached to ${frameTo.url()}`);
@@ -158,7 +158,7 @@
             // set function to request end from probe
             this._page.exposeFunction('__PROBE_FN_REQUEST_END__', () => {
                 //DEBUG:
-                // logger.debug('Probe finished');
+                logger.debug('Probe finished');
                 let status = {'status': 'ok'};
                 this.emit(Handler.Events.Finished, 0, status);
             });

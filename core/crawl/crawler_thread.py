@@ -130,21 +130,6 @@ class CrawlerThread(threading.Thread):
 
         return request
 
-    @staticmethod
-    def _load_probe_json(jsn):
-
-        # jsn = jsn.strip()
-
-        if not jsn:
-            jsn = "["
-        if jsn[-1] != "]":
-            jsn += '{"status":"ok", "partialcontent":true}]'
-        try:
-            return json.loads(jsn)
-        except Exception:
-            # print "-- JSON DECODE ERROR %s" % jsn
-            raise
-
     def _set_probe_params(self, request):
         params = []
         cookies = []
@@ -181,23 +166,15 @@ class CrawlerThread(threading.Thread):
         while retries:
 
             cmd = CommandExecutor(Shared.probe_cmd + params)
-            out = cmd.execute(Shared.options['process_timeout'] + 2)
-            try:
-                jsn = json.loads(out)['message']
-            except Exception:
-                print("Probe error")
-                raise
+            jsn = cmd.execute(Shared.options['process_timeout'] + 2)
 
             if jsn is None:
                 errors.append(ERROR_PROBEKILLED)
                 sleep(CrawlerThread._PROCESS_RETRIES_INTERVAL)  # ... ???
                 retries -= 1
                 continue
-
-            # try to decode json also after an exception .. sometimes phantom crashes BUT returns a valid json ..
-            if jsn and type(jsn) is not unicode:
-                jsn = jsn[0]
-            probe_array = self._load_probe_json(jsn)
+            else:
+                probe_array = self._load_probe_json(jsn)
 
             if probe_array:
                 probe = Probe(probe_array, request)
@@ -213,3 +190,18 @@ class CrawlerThread(threading.Thread):
             sleep(CrawlerThread._PROCESS_RETRIES_INTERVAL)
             retries -= 1
         return probe
+
+    @staticmethod
+    def _load_probe_json(jsn):
+
+        if isinstance(jsn, tuple):
+            jsn = jsn[0]
+
+        try:
+            jsn1 = json.loads(jsn)
+            data = json.loads(jsn1['message'])
+            return data
+        except ValueError:
+            print "-- JSON DECODE ERROR %s" % jsn
+        except Exception:
+            raise

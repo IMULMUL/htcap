@@ -105,11 +105,11 @@
             doNextAction() {
 
                 // DEBUG:
-                // if (this._sentXHRQueue.length <= 0) {            // avoiding noise
-                //     console.debug('eventLoop doNextAction - done:', this._doneXHRQueue.length,
-                //         ', DOM:', this._DOMAssessmentQueue.length,
-                //         ', event:', this._toBeTriggeredEventsQueue.length);
-                // }
+                if (this._sentXHRQueue.length <= 0) {            // avoiding noise
+                    console.debug('eventLoop doNextAction - done:', this._doneXHRQueue.length,
+                        ', DOM:', this._DOMAssessmentQueue.length,
+                        ', event:', this._toBeTriggeredEventsQueue.length);
+                }
 
                 if (this._sentXHRQueue.length > 0) { // if there is XHR waiting to be resolved
                     // releasing the eventLoop waiting for resolution
@@ -991,7 +991,7 @@
 
         if (!window.__PROBE_CONSTANTS__) {
             // DEBUG:
-            console.debug('setting the probe');
+            console.debug(`setting the probe on ${window.location.href}`);
 
             // adding constants to page
             window.__PROBE_CONSTANTS__ = constants;
