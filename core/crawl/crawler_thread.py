@@ -27,6 +27,7 @@ from core.crawl.lib.utils import adjust_requests
 from core.lib.exception import ThreadExitRequestException
 from core.lib.http_get import HttpGet
 from core.lib.shell import CommandExecutor
+from core.lib.thirdparty.simhash import Simhash
 
 
 # TODO: use NamedTemporaryFile for self._cookie_file
@@ -70,14 +71,17 @@ class CrawlerThread(threading.Thread):
             if probe:
                 if probe.status == "ok" or probe.errcode == ERROR_PROBE_TO:
 
-                    requests = probe.requests
+                    # Main condition for duplicate checking
+                    if not (Shared.block_duplicates and self._is_duplicate(probe, request)):
 
-                    if len(probe.user_output) > 0:
-                        request.user_output = probe.user_output
+                        requests = probe.requests
 
-                    # if the probe return some cookies set it as the last one
-                    if probe.cookies:
-                        Shared.end_cookies = probe.cookies
+                        if len(probe.user_output) > 0:
+                            request.user_output = probe.user_output
+
+                        # if the probe return some cookies set it as the last one
+                        if probe.cookies:
+                            Shared.end_cookies = probe.cookies
 
             else:
                 errors.append(ERROR_PROBEFAILURE)
@@ -200,3 +204,20 @@ class CrawlerThread(threading.Thread):
             print "-- JSON DECODE ERROR %s" % jsn
         except Exception:
             raise
+
+    @staticmethod
+    def _is_duplicate(probe, request, threshold=6):
+
+        if probe.hash is not None:
+            for url, prev_hash in Shared.hash_bucket:
+                d = Simhash(prev_hash).distance(probe.hash)
+                # Debug
+                print("Distance between " + request.url + " and " + url + " is " + str(d))
+                if d <= threshold:
+                    print("Catched near duplicate value between :" + request.url + " and " + url +
+                          " with simhash distance: " + str(d))
+                    Shared.hash_bucket.append((request.url, probe.hash))
+                    return True
+
+            Shared.hash_bucket.append((request.url, probe.hash))
+        return False
