@@ -16,17 +16,17 @@ from urlparse import urljoin, urlsplit
 
 from core.constants import *
 from core.lib.cookie import Cookie
-from core.lib.thirdparty.simhash import Simhash
 from core.lib.utils import extract_http_auth, normalize_url, remove_tokens
 
 
 class Request(object):
     def __init__(self, type, method, url, parent=None, referer=None, data=None, trigger=None, json_cookies=None,
-                 set_cookie=None, http_auth=None, db_id=None, parent_db_id=None, out_of_scope=None, html=None):
+                 set_cookie=None, http_auth=None, db_id=None, parent_db_id=None, out_of_scope=None):
         self.type = type
         self.method = method
         self.user_output = []
-
+        self.html = None
+        self._html_hash = None
         url = url.strip()
         try:
             url = url.decode("utf-8")
@@ -52,8 +52,6 @@ class Request(object):
 
         # parent is the parent request that can be a redirect, referer is the referer page (ahead of redirects)
         self._parent = parent
-        self._html = None
-        self._html_hash = Simhash(html) if html is not None else Simhash(self.url)
         self.data = data if data else ""
         self.trigger = trigger
         self.db_id = db_id
@@ -99,15 +97,6 @@ class Request(object):
     @html.setter
     def html(self, value):
         self._html = value
-        self._html_hash = Simhash(value)
-
-    @property
-    def hash(self):
-        return self._html_hash
-
-    @hash.setter
-    def hash(self, value):
-        self._html_hash = Simhash(value)
 
     def get_dict(self):
         return dict(
