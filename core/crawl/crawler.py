@@ -461,7 +461,7 @@ Options:
                         database.save_crawl_result(result, True)
                         for req in result.found_requests:
 
-                            # Main condition for duplicate checking
+                            # Main condition for duplicate checking, will be tr
                             if not (self._block_duplicates and self._is_duplicate(req)):
 
                                 if verbose:
@@ -504,14 +504,14 @@ Options:
     def _is_duplicate(self, request):
         # compare request.hash against every other ones, return False if it is not close enough to anyone's hash.
         if request.hash is not None:
-            for crawled_hash in Shared.hash_bucket:
-                d = Simhash(crawled_hash).distance(request.hash)
+            for url, prev_hash in Shared.hash_bucket:
+                d = Simhash(prev_hash).distance(request.hash)
                 if d in range(1, 6):
-                    print("Catched near duplicate value for :" + request.url)
-                    print("with distance: " + str(Simhash(crawled_hash).distance(request.hash)))
-                    Shared.hash_bucket.append(request.hash)
+                    print("Catched near duplicate value between :" + request.url + " and " + url +
+                          " with simhash distance: " + str(d))
+                    Shared.hash_bucket.append((request.url, request.hash))
                     return True
-            Shared.hash_bucket.append(request.hash)
+            Shared.hash_bucket.append((request.url, request.hash))
         return False
 
     def _set_probe(self):

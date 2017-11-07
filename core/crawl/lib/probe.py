@@ -23,6 +23,7 @@ class Probe:
         self.redirect = None
         # if True the probe returned no error BUT the json is not closed properly
         self.partialcontent = False
+        self.html = None
         self.user_output = []
         status = data.pop()
 
@@ -46,10 +47,14 @@ class Probe:
             self.requests.append(r)
 
         for key, val in data:
+            if key == "html":
+                self.html = val
+
+        for key, val in data:
             if key == "request":
                 trigger = val['trigger'] if 'trigger' in val else None
                 r = Request(val['type'], val['method'], val['url'], parent=parent, set_cookie=self.cookies,
-                            data=val['data'], trigger=trigger, parent_db_id=parent.db_id)
+                            data=val['data'], html=self.html, trigger=trigger, parent_db_id=parent.db_id)
                 self.requests.append(r)
             elif key == "user":
                 self.user_output.append(val)

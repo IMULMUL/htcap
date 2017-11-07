@@ -85,7 +85,10 @@
                                         .then(cookies => {
                                             result.push(['cookies', cookies]);
                                         });
-
+                                handler.getHtml()
+                                        .then(html => {
+                                          result.push(['html', html]);
+                                        });
                                 // DEBUG:
                                 logger.debug('starting the probe');
                                 // start analysis on the page
