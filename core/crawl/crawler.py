@@ -38,7 +38,7 @@ from core.lib.exception import NotHtmlException
 from core.lib.http_get import HttpGet
 from core.lib.request import Request
 from core.lib.utils import get_program_infos, getrealdir, print_progressbar, stdoutw, \
-    normalize_url, cmd_to_str, generate_filename
+    normalize_url, cmd_to_str, generate_filename, get_probe_cmd
 
 
 # TODO: clean the exception handling (no more `except Exception:`)
