@@ -470,25 +470,25 @@ Options:
                             if verbose:
                                 print("  new request found %s" % req)
 
-                                database.save_request(req)
-                                if request_is_crawlable(req) and req not in Shared.requests and req not in req_to_crawl:
-                                    if request_depth(req) > Shared.options['max_depth'] or request_post_depth(req) > \
-                                            Shared.options['max_post_depth']:
-                                        if verbose:
-                                            print("  * cannot crawl: %s : crawl depth limit reached" % req)
-                                        result = CrawlResult(req, errors=[ERROR_CRAWLDEPTH])
-                                        database.save_crawl_result(result, False)
-                                        continue
+                            database.save_request(req)
+                            if request_is_crawlable(req) and req not in Shared.requests and req not in req_to_crawl:
+                                if request_depth(req) > Shared.options['max_depth'] or request_post_depth(req) > \
+                                        Shared.options['max_post_depth']:
+                                    if verbose:
+                                        print("  * cannot crawl: %s : crawl depth limit reached" % req)
+                                    result = CrawlResult(req, errors=[ERROR_CRAWLDEPTH])
+                                    database.save_crawl_result(result, False)
+                                    continue
 
-                                    if req.redirects > Shared.options['max_redirects']:
-                                        if verbose:
-                                            print("  * cannot crawl: %s : too many redirects" % req)
-                                        result = CrawlResult(req, errors=[ERROR_MAXREDIRECTS])
-                                        database.save_crawl_result(result, False)
-                                        continue
+                                if req.redirects > Shared.options['max_redirects']:
+                                    if verbose:
+                                        print("  * cannot crawl: %s : too many redirects" % req)
+                                    result = CrawlResult(req, errors=[ERROR_MAXREDIRECTS])
+                                    database.save_crawl_result(result, False)
+                                    continue
 
-                                    pending += 1
-                                    req_to_crawl.append(req)
+                                pending += 1
+                                req_to_crawl.append(req)
 
                     Shared.crawl_results = []
                     database.commit()

@@ -85,7 +85,7 @@
                                         .then(cookies => {
                                             result.push(['cookies', cookies]);
                                         });
-                                handler.getHtml()
+                                page.content()
                                         .then(html => {
                                           result.push(['html', html]);
                                         });

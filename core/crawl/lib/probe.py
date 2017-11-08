@@ -48,10 +48,6 @@ class Probe:
             self.requests.append(r)
 
         for key, val in data:
-            if key == "html":
-                self.hash = Simhash(val)
-
-        for key, val in data:
             if key == "request":
                 trigger = val['trigger'] if 'trigger' in val else None
                 r = Request(val['type'], val['method'], val['url'], parent=parent, set_cookie=self.cookies,
@@ -59,5 +55,9 @@ class Probe:
                 self.requests.append(r)
             elif key == "user":
                 self.user_output.append(val)
+            elif key == "html":
+                self.hash = Simhash(val)
+
+
 
             # @TODO handle cookies set by ajax (in probe too)
