@@ -212,7 +212,7 @@ class CrawlerThread(threading.Thread):
             for url, prev_hash in Shared.hash_bucket:
                 d = Simhash(prev_hash).distance(probe.hash)
                 # Debug
-                print("Distance between " + request.url + " and " + url + " is " + str(d))
+                # print("Distance between " + request.url + " and " + url + " is " + str(d))
                 if d <= threshold:
                     print("Catched near duplicate value between :" + request.url + " and " + url +
                           " with simhash distance: " + str(d))
