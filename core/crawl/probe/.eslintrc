@@ -13,7 +13,8 @@
     "expect": true,
     "by": true,
     "spyOn": true,
-    "WebKitMutationObserver": true
+    "WebKitMutationObserver": true,
+    "chrome": true
   },
   "rules": {
     "semi": "error",
