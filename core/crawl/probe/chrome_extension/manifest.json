@@ -4,9 +4,9 @@
   "version": "1.0",
   "permissions": [
     "webRequest",
-    "*://*/",
+    "*://*/*",
     "webRequestBlocking",
-    "activeTab"
+    "tabs"
   ],
   "background": {
     "persistent": true,
