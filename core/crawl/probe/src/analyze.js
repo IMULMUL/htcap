@@ -12,7 +12,7 @@
 // var fs = require('fs');
 // var page = require('webpage')
 //     .create();
-let page = {}, options = {}, headers = {};
+// let page = {}, options = {}, headers = {};
 // window.page = page;
 // window.fs = fs;
 
@@ -99,7 +99,7 @@ let page = {}, options = {}, headers = {};
 // console.log('[');
 
 /* maximum execution time */
-setTimeout(execTimedOut, options.maxExecTime);
+// setTimeout(execTimedOut, options.maxExecTime);
 
 
 // phantom.onError = function(msg, trace) {
@@ -139,32 +139,32 @@ setTimeout(execTimedOut, options.maxExecTime);
 // };
 
 // to detect window.location= / document.location.href=
-page.onNavigationRequested = function(url, type) {
-
-    if (page.navigationLocked === true) {
-        page.evaluate(function(url, type) {
-            if (type === 'LinkClicked') {
-                return;
-            }
-
-            if (type === 'Other' && url !== 'about:blank') {
-                window.__PROBE__.printLink(url);
-            }
-
-        }, url, type);
-    }
-
-
-    // allow the navigation if only the hash is changed
-    if (page.navigationLocked === true && compareUrls(url, site)) {
-        page.navigationLocked = false;
-        page.evaluate(function(url) {
-            document.location.href = url;
-        }, url);
-    }
-
-    page.navigationLocked = true;
-};
+// page.onNavigationRequested = function(url, type) {
+//
+//     if (page.navigationLocked === true) {
+//         page.evaluate(function(url, type) {
+//             if (type === 'LinkClicked') {
+//                 return;
+//             }
+//
+//             if (type === 'Other' && url !== 'about:blank') {
+//                 window.__PROBE__.printLink(url);
+//             }
+//
+//         }, url, type);
+//     }
+//
+//
+//     // allow the navigation if only the hash is changed
+//     if (page.navigationLocked === true && compareUrls(url, site)) {
+//         page.navigationLocked = false;
+//         page.evaluate(function(url) {
+//             document.location.href = url;
+//         }, url);
+//     }
+//
+//     page.navigationLocked = true;
+// };
 
 // page.onConfirm = function() {
 //     return true;
@@ -213,9 +213,9 @@ page.onNavigationRequested = function(url, type) {
 //     headers['Authorization'] = 'Basic ' + btoa(options.httpAuth[0] + ':' + options.httpAuth[1]);
 // }
 
-if (options.referer) {
-    headers['Referer'] = options.referer;
-}
+// if (options.referer) {
+//     headers['Referer'] = options.referer;
+// }
 
 // page.customHeaders = headers;
 
@@ -281,20 +281,20 @@ if (options.referer) {
 
 // });
 
-function compareUrls(url1, url2, includeHash) {
-    var a1 = document.createElement('a');
-    var a2 = document.createElement('a');
-    a1.href = url1;
-    a2.href = url2;
-
-    var eq = (a1.protocol === a2.protocol && a1.host === a2.host && a1.pathname === a2.pathname && a1.search === a2.search);
-
-    if (includeHash) {
-        eq = eq && a1.hash === a2.hash;
-    }
-
-    return eq;
-}
+// function compareUrls(url1, url2, includeHash) {
+//     var a1 = document.createElement('a');
+//     var a2 = document.createElement('a');
+//     a1.href = url1;
+//     a2.href = url2;
+//
+//     var eq = (a1.protocol === a2.protocol && a1.host === a2.host && a1.pathname === a2.pathname && a1.search === a2.search);
+//
+//     if (includeHash) {
+//         eq = eq && a1.hash === a2.hash;
+//     }
+//
+//     return eq;
+// }
 
 
 // function printCookies() {
@@ -327,15 +327,15 @@ function compareUrls(url1, url2, includeHash) {
 // }
 
 
-function execTimedOut() {
-    if (!response || response.headers.length === 0) {
-        printStatus('error', 'requestTimeout');
-        phantom.exit(0);
-    }
-    printStatus('error', 'probe_timeout');
-    phantom.exit(0);
-
-}
+// function execTimedOut() {
+//     if (!response || response.headers.length === 0) {
+//         printStatus('error', 'requestTimeout');
+//         phantom.exit(0);
+//     }
+//     printStatus('error', 'probe_timeout');
+//     phantom.exit(0);
+//
+// }
 
 
 // function assertContentTypeHtml(response) {

@@ -20,6 +20,8 @@
             '--ssl-version-min=tls1',
             '--disable-web-security',
             '--allow-running-insecure-content',
+            `--load-extension=${__dirname}/../chrome_extension/`,
+            `--disable-extensions-except=${__dirname}/../chrome_extension/`,
         ];
 
         if (proxy) {
@@ -106,15 +108,6 @@
                 }
             });
 
-            this._page.on('framenavigated', frameTo => {
-                //DEBUG:
-                // logger.debug(`framenavigated to ${frameTo.url()}`);
-
-                this._page.evaluate((url) => {
-                    window.__PROBE__.printLink(url);
-                }, frameTo.url());
-            });
-
             this._page.on('dialog', dialog => {
                 //DEBUG:
                 // logger.debug(`Page dialog, type "${dialog.type}": "${dialog.message()}"`);
@@ -128,10 +121,14 @@
                 this.emit(Handler.Events.Finished, 1, status);
             });
 
+            // // DEBUG:
+            // this._page.on('framenavigated', frameTo => {
+            //     logger.debug(`framenavigated to ${frameTo.url()}`);
+            // });
             // //DEBUG:
-            this._page.on('console', consoleMessage => {
-                logger.debug(`Page console message, type "${consoleMessage.type}": "${consoleMessage.text}"`);
-            });
+            // this._page.on('console', consoleMessage => {
+            //     logger.debug(`Page console message, type "${consoleMessage.type}": "${consoleMessage.text}"`);
+            // });
             // //DEBUG:
             // this._page.on('frameattached', frameTo => {
             //     logger.debug(`frameattached to ${frameTo.url()}`);

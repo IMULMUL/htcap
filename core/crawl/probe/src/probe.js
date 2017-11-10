@@ -1001,6 +1001,15 @@
             // listening for messageEvent to trigger waiting events
             window.addEventListener('message', probe.eventLoopManager.eventMessageHandler.bind(probe.eventLoopManager), true);
 
+            // listening for message from the navigation blocker extension
+            window.addEventListener('message', function(event) {
+                if (event.data.type && event.data.type === 'NavigationBlocked' && event.data.url) {
+                    // DEBUG:
+                    console.debug('received an url from chrome extension: ' + event.data.url);
+                    window.__PROBE__.printLink(event.data.url);
+                }
+            });
+
             window.__PROBE__ = probe;
 
             // initialize the hook once the DOM content is fully loaded
