@@ -29,7 +29,7 @@
         }
 
         return puppeteer.launch({
-            headless: true,
+            headless: false,
             ignoreHTTPSErrors: true,
             args: browserArgs,
         })
