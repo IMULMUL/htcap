@@ -11,7 +11,6 @@
         });
     });
 
-
     // Create tab event listeners
     function onUpdatedListener(tabId, changeInfo, tab) {
         tabs[tab.id] = tab;
@@ -45,7 +44,7 @@
 
     chrome.webRequest.onBeforeRequest.addListener(onBeforeRequestListener, {
         urls: ['<all_urls>'],
-        types: ['main_frame', 'sub_frame'], // only watching for frame type request
+        types: ['main_frame', 'sub_frame'], // only watching for "frame" type request
     }, ['blocking']);
 
     /**
