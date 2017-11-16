@@ -4,8 +4,8 @@
   "version": "1.0",
   "permissions": [
     "webRequest",
-    "*://*/*",
     "webRequestBlocking",
+    "<all_urls>",
     "tabs"
   ],
   "background": {
