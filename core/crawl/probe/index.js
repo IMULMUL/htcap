@@ -72,7 +72,7 @@
 
         handler.initialize()
             .then((page) => {
-                page.goto(options.startUrl.href, {waitUntil: ['load', 'domcontentloaded', 'networkidle0', 'networkidle2']})
+                page.goto(options.startUrl.href, {waitUntil: 'networkidle'})
                     .then(response => {
 
                         if (response.ok) {
