@@ -167,7 +167,7 @@
                 this._page.setUserAgent(this._options.userAgent),
                 this._page.setCookie(...this._options.cookies),
                 this._page.setViewport(this._constants.viewport),
-                this._page.setRequestInterception(true),
+                this._page.setRequestInterceptionEnabled(true),
                 this._page.authenticate(this._options.httpAuth),
             ])
                 .then(() => {
