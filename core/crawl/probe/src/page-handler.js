@@ -2,9 +2,8 @@
     'use strict';
 
     const EventEmitter = require('events');
-    //DEBUG:
-    const logger = require('../logger');
 
+    const logger = require('../logger').debug;
     const probe = require('./probe');
 
     /**
@@ -56,9 +55,9 @@
 
         initialize() {
             this._page.on('request', interceptedRequest => {
-                //DEBUG:
-                // logger.debug(`intercepted request: ${interceptedRequest.resourceType} ${interceptedRequest.url}`);
-
+                if (this._options.verbosity >= 3) {
+                    logger.debug(`intercepted request: ${interceptedRequest.resourceType} ${interceptedRequest.url}`);
+                }
                 // block image loading
                 if (interceptedRequest.resourceType === 'image') {
                     interceptedRequest.abort();
@@ -109,42 +108,63 @@
             });
 
             this._page.on('dialog', dialog => {
-                //DEBUG:
-                // logger.debug(`Page dialog, type "${dialog.type}": "${dialog.message()}"`);
+                if (this._options.verbosity >= 3) {
+                    logger.debug(`Page dialog, type "${dialog.type}": "${dialog.message()}"`);
+                }
                 dialog.accept();
             });
 
             this._page.on('error', error => {
-                //DEBUG:
-                logger.debug(`Page crash: "${error.code}", "${error.message()}"`);
+                if (this._options.verbosity >= 1) {
+                    logger.error(`Page crash: "${error.code}", "${error.message()}"`);
+                }
                 let status = {'status': 'error', 'code': 'pageCrash', 'message': `Page crash with: "${error.code}", "${error.message()}"`};
                 this.emit(Handler.Events.Finished, 1, status);
             });
 
-            // // DEBUG:
-            // this._page.on('framenavigated', frameTo => {
-            //     logger.debug(`framenavigated to ${frameTo.url()}`);
-            // });
-            // //DEBUG:
-            // this._page.on('console', consoleMessage => {
-            //     logger.debug(`Page console message, type "${consoleMessage.type}": "${consoleMessage.text}"`);
-            // });
-            // //DEBUG:
-            // this._page.on('frameattached', frameTo => {
-            //     logger.debug(`frameattached to ${frameTo.url()}`);
-            // });
-            // //DEBUG:
-            // this._page.on('requestfailed', failedRequest => {
-            //     logger.debug(`requestfailed: ${failedRequest.url}`);
-            // });
-            // //DEBUG:
-            // this._page.on('requestfinished', finishedRequest => {
-            //     logger.debug(`requestfinished: ${finishedRequest.response().status}, ${finishedRequest.method} ${finishedRequest.url}`);
-            // });
-            // //DEBUG:
-            // this._page.on('load', () => {
-            //     logger.debug('load done');
-            // });
+            this._page.on('framenavigated', frameTo => {
+                if (this._options.verbosity >= 3) {
+                    logger.debug(`framenavigated to ${frameTo.url()}`);
+                }
+            });
+
+            this._page.on('console', consoleMessage => {
+                if (this._options.verbosity >= 1) {
+                    if (['error', 'warning', 'trace'].includes(consoleMessage.type)) {
+                        logger.warn(`Page console error message : "${consoleMessage.text}"`);
+                    } else if (consoleMessage.type === 'info' && this._options.verbosity >= 2) {
+                        logger.info(`Page console message : ${consoleMessage.text}`);
+                    } else if (consoleMessage.type === 'log' && this._options.verbosity >= 3) {
+                        logger.debug(`Page console message : "${consoleMessage.text}"`);
+                    } else if (this._options.verbosity >= 4) {
+                        logger.debug(`Page console message, type ${consoleMessage.type} : "${consoleMessage.text}"`);
+                    }
+                }
+            });
+
+            this._page.on('frameattached', frameTo => {
+                if (this._options.verbosity >= 3) {
+                    logger.debug(`frameattached to ${frameTo.url()}`);
+                }
+            });
+
+            this._page.on('requestfailed', failedRequest => {
+                if (this._options.verbosity >= 3) {
+                    logger.debug(`requestfailed: ${failedRequest.url}`);
+                }
+            });
+
+            this._page.on('requestfinished', finishedRequest => {
+                if (this._options.verbosity >= 3) {
+                    logger.debug(`requestfinished: ${finishedRequest.response().status}, ${finishedRequest.method} ${finishedRequest.url}`);
+                }
+            });
+
+            this._page.on('load', () => {
+                if (this._options.verbosity >= 1) {
+                    logger.info('load done');
+                }
+            });
 
 
             // set function to return value from probe
@@ -154,8 +174,9 @@
 
             // set function to request end from probe
             this._page.exposeFunction('__PROBE_FN_REQUEST_END__', () => {
-                //DEBUG:
-                logger.debug('Probe finished');
+                if (this._options.verbosity >= 1) {
+                    logger.info('Probe finished');
+                }
                 let status = {'status': 'ok'};
                 this.emit(Handler.Events.Finished, 0, status);
             });

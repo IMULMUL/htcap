@@ -8,7 +8,7 @@
  version.
  */
 
-
+/*eslint no-console: off */
 (function() {
     'use strict';
 
@@ -89,9 +89,7 @@
              * start the eventLoopManager
              */
             start() {
-                // DEBUG:
-                console.debug('eventLoop start');
-
+                console.info('eventLoop start');
                 window.postMessage(this._config.messageEvent, '*');
             }
 
@@ -104,9 +102,8 @@
              */
             doNextAction() {
 
-                // DEBUG:
                 if (this._sentXHRQueue.length <= 0) {            // avoiding noise
-                    console.debug('eventLoop doNextAction - done:', this._doneXHRQueue.length,
+                    console.log('eventLoop doNextAction - done:', this._doneXHRQueue.length,
                         ', DOM:', this._DOMAssessmentQueue.length,
                         ', event:', this._toBeTriggeredEventsQueue.length);
                 }
@@ -125,8 +122,8 @@
                 } else if (this._DOMAssessmentQueue.length > 0) { // if there is DOMAssessment waiting
 
                     let element = this._DOMAssessmentQueue.shift();
-                    // DEBUG:
-                    // console.debug('eventLoop analyzeDOM: ' + _elementToString(element));
+
+                    console.debug('eventLoop analyzeDOM: ' + _elementToString(element));
 
                     // starting analyze on the next element
                     this._probe._analyzeDOMElement(element);
@@ -139,8 +136,7 @@
                     // setting the current element
                     this._probe._currentPageEvent = pageEvent;
 
-                    // DEBUG:
-                    // console.debug('eventLoop pageEvent.trigger', pageEvent.element.tagName, pageEvent.eventName);
+                    console.debug('eventLoop pageEvent.trigger', pageEvent.element.tagName, pageEvent.eventName);
 
                     // Triggering the event
                     pageEvent.trigger();
@@ -149,8 +145,7 @@
                         window.postMessage(this._config.messageEvent, '*');
                     }.bind(this), this._config.afterEventTriggeredTimeout);
                 } else {
-                    // DEBUG:
-                    console.debug('eventLoop END');
+                    console.info('eventLoop end');
                     window.__PROBE_FN_REQUEST_END__();
                 }
             }
@@ -162,26 +157,25 @@
             }
 
             nodeMutated(mutations) {
-                // DEBUG:
-                // console.debug('eventLoop nodesMutated:', mutations.length);
+                console.log('eventLoop nodesMutated:', mutations.length);
                 mutations.forEach(function(mutationRecord) {
                     if (mutationRecord.type === 'childList') {
                         for (let i = 0; i < mutationRecord.addedNodes.length; i++) {
                             let addedNode = mutationRecord.addedNodes[i];
-                            // DEBUG:
-                            // console.debug('added:', _elementToString(mutationRecord.addedNodes[i]), mutationRecord.addedNodes[i]);
+
+                            console.debug('Node added:', _elementToString(mutationRecord.addedNodes[i]), mutationRecord.addedNodes[i]);
 
                             // see: https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeType#Constants
                             if (addedNode.nodeType === Node.ELEMENT_NODE) {
-                                // DEBUG:
-                                // console.debug('added:', addedNode);
+
+                                console.debug('Node scheduled:', addedNode);
                                 this.scheduleDOMAssessment(addedNode);
                             }
                         }
                     } else if (mutationRecord.type === 'attributes') {
                         let element = mutationRecord.target;
-                        // DEBUG:
-                        // console.debug('eventLoop nodeMutated: attributes', _elementToString(element), mutationRecord.attributeName);
+
+                        console.debug('eventLoop nodeMutated: attributes', _elementToString(element), mutationRecord.attributeName);
 
                         // removing any previous trace of triggered event on this element
                         this._probe._triggeredPageEvents.forEach(function(pageEvent, index) {
@@ -196,24 +190,24 @@
 
             scheduleEventTriggering(pageEvent) {
                 if (this._toBeTriggeredEventsQueue.indexOf(pageEvent) < 0) {
-                    // DEBUG:
-                    // console.debug(`eventLoop scheduleEventTriggering: "${pageEvent.element.outerHTML}"  ${pageEvent.eventName}`);
+
+                    console.debug(`eventLoop scheduleEventTriggering: "${pageEvent.element.outerHTML}"  ${pageEvent.eventName}`);
                     this._toBeTriggeredEventsQueue.push(pageEvent);
                 }
             }
 
             sentXHR(request) {
                 if (this._sentXHRQueue.indexOf(request) < 0) {
-                    // DEBUG:
-                    // console.debug('eventLoop sentXHR');
+
+                    console.log('eventLoop sentXHR');
                     this._sentXHRQueue.push(request);
                 }
             }
 
             doneXHR(request) {
                 if (this._doneXHRQueue.indexOf(request) < 0) {
-                    // DEBUG:
-                    // console.debug('eventLoop doneXHR');
+
+                    console.log('eventLoop doneXHR');
 
                     // if the request is in the sentXHR queue
                     let i = this._sentXHRQueue.indexOf(request);
@@ -225,9 +219,9 @@
                 }
             }
 
+            // eslint-disable-next-line no-unused-vars: off
             inErrorXHR(request) {
-                // DEBUG:
-                // console.debug('eventLoop inErrorXHR');
+                console.log('eventLoop inErrorXHR');
             }
         }
 
@@ -310,8 +304,7 @@
              */
             trigger() {
 
-                // DEBUG:
-                // console.debug('PageEvent triggering events for : ', _elementToString(this.element), this.eventName);
+                console.debug('PageEvent triggering events for : ', _elementToString(this.element), this.eventName);
 
                 let event = new Event(this.eventName);
                 this.element.dispatchEvent(event);
@@ -690,8 +683,8 @@
 
                 events.forEach(eventName => {
                     let pageEvent = new PageEvent(element, eventName);
-                    // DEBUG:
-                    // console.debug('triggering events for : ' + _elementToString(element) + ' ' + eventName);
+
+                    console.debug('triggering events for : ' + _elementToString(element) + ' ' + eventName);
 
                     if (!['load', 'unload', 'beforeunload'].includes(eventName) && !this._isPageEventAlreadyTriggered(pageEvent)) {
                         this._triggeredPageEvents.push(pageEvent);
@@ -984,9 +977,9 @@
             });
         }
 
-        if (!window.__PROBE_CONSTANTS__) {
+        if (!window.__PROBE_CONSTANTS__ && window.location.href.startsWith('http')) {
             // DEBUG:
-            // console.debug(`setting the probe on ${window.location.href}`);
+            console.info(`setting the probe on ${window.location.href}`);
 
             // adding constants to page
             window.__PROBE_CONSTANTS__ = constants;
@@ -1000,7 +993,7 @@
             window.addEventListener('message', function(event) {
                 if (event.data.type && event.data.type === 'NavigationBlocked' && event.data.url) {
                     // DEBUG:
-                    // console.debug('received an url from chrome extension: ' + event.data.url);
+                    console.log('received an url from chrome extension: ' + event.data.url);
                     window.__PROBE__.printLink(event.data.url);
                 }
             });

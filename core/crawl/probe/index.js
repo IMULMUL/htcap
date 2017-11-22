@@ -2,8 +2,6 @@
  * @todo (blocked):
  * - make possible to send custom headers (set a referer) on page.goto() see: {@link https://github.com/GoogleChrome/puppeteer/issues/1062}
  *     and {@link https://github.com/GoogleChrome/puppeteer/issues/686}
- * - block navigation away and return content related to "navigationRequest" as in PhantomJS see: {@link https://github.com/GoogleChrome/puppeteer/issues/823}
- *   possible workaround: watching `onunload` page event to prevent navigation
  *
  * @todo (nice to have):
  * - add a debug level
@@ -16,7 +14,8 @@
 
     const process = require('process');
 
-    const logger = require('./logger');
+    const logger = require('./logger').debug;
+    const output = require('./logger').output;
     const puppeteer = require('puppeteer');
 
     const constants = require('./src/constants').constants;
@@ -29,7 +28,7 @@
         browser,
         handler;
 
-    let startTime = new Date();
+    let startTime = Date.now();
 
     // handling SIGTERM signal
     process.on('SIGTERM', () => {
@@ -39,11 +38,11 @@
 
     function _requestJobEnd(exitCode) {
 
-        //DEBUG:
-        logger.debug('closing Node process');
-
-        logger.log('debug', `${result.length} results in ${(Date.now() - startTime) / 1000} sec : ${JSON.stringify(result)}`);
-        logger.log('info', `${JSON.stringify(result)}`);
+        if (options.verbosity >= 1) {
+            logger.info('closing Node process');
+            logger.info('debug', `got results in ${(Date.now() - startTime) / 1000} sec : ${JSON.stringify(result)}`);
+        }
+        output.log('info', `${JSON.stringify(result)}`);
 
         if (browser) {
             browser.close()
@@ -72,6 +71,9 @@
 
         handler.initialize()
             .then((page) => {
+                if (options.verbosity >= 1) {
+                    logger.info(`starting navigation to ${options.startUrl.href}`);
+                }
                 page.goto(options.startUrl.href, {waitUntil: 'networkidle'})
                     .then(response => {
 
@@ -86,8 +88,9 @@
                                             result.push(['cookies', cookies]);
                                         });
 
-                                // DEBUG:
-                                logger.debug('starting the probe');
+                                if (options.verbosity >= 1) {
+                                    logger.info('starting the probe');
+                                }
                                 // start analysis on the page
                                 handler.startProbe();
                             } else {
@@ -100,12 +103,16 @@
                         }
                     },
                     (error) => {
-                        // logger.error(error);
+                        if (options.verbosity >= 1) {
+                            logger.error(`Error during goto: ${error}`);
+                        }
                         result.push({'status': 'error', 'code': 'load', 'message': `error is ${error}`});
                         _requestJobEnd(1);
                     });
             }, (error) => {
-                // logger.error(error);
+                if (options.verbosity >= 1) {
+                    logger.error(`Error during initialisation: ${error}`);
+                }
                 result.push({'status': 'error', 'code': 'probeError', 'message': `error is ${error}`});
                 _requestJobEnd(1);
             });

@@ -2,7 +2,20 @@
     'use strict';
     const winston = require('winston');
 
-    let logger = new (winston.Logger)({
+    let outputLogger = new winston.Logger({
+        transports: [
+            new (winston.transports.Console)(
+                {
+                    formatter: (options) => {
+                        return options.message;
+                    },
+                },
+            ),
+        ],
+        exitOnError: true,
+    });
+
+    let debugLogger = new winston.Logger({
         transports: [
             new (winston.transports.File)(
                 {
@@ -13,22 +26,11 @@
                     json: false,
                 },
             ),
-            new (winston.transports.Console)(
-                {
-                    level: 'info',
-                    timestamp: false,
-                    prettyPrint: false,
-                    json: true,
-                },
-            ),
         ],
         exceptionHandlers: [
-            new (winston.transports.Console)({json: false, timestamp: true, prettyPrint: true, colorize: true}),
-            // new winston.transports.File({filename: __dirname + '/exceptions.log', json: false}),
+            new (winston.transports.Console)({json: false, timestamp: true, prettyPrint: true}),
         ],
-        exitOnError: true,
     });
-
-    module.exports = logger;
+    module.exports = {output: outputLogger, debug: debugLogger};
 
 })();

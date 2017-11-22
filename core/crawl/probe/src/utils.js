@@ -126,6 +126,17 @@
                 defaultValue: '',
             },
         );
+
+        argumentParser.addArgument(
+            '-v',
+            {
+                help: 'verbosity level',
+                dest: 'verbosity',
+                action: 'count',
+                defaultValue: 0,
+            },
+        );
+
         argumentParser.addArgument(
             'startUrl',
             {
@@ -151,6 +162,7 @@
         options.triggerEvents = args.triggerEvents;
         options.excludedUrls = args.excludedUrls !== '' ? args.excludedUrls.split(',') : [];
         options.overrideTimeoutFunctions = args.overrideTimeoutFunctions;
+        options.verbosity = args.verbosity;
 
         options.inputValues = _generateRandomValues(options.random);
 

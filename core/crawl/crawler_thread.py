@@ -159,8 +159,11 @@ class CrawlerThread(threading.Thread):
 
         while retries:
 
+            # print("### INPUT: %s" % repr(Shared.probe_cmd + params))
             cmd = CommandExecutor(Shared.probe_cmd + params)
             jsn = cmd.execute(Shared.options['process_timeout'] + 2)
+
+            # print("### OUTPUT: %s" % repr(jsn))
 
             if jsn is None:
                 errors.append(ERROR_PROBEKILLED)
@@ -192,8 +195,7 @@ class CrawlerThread(threading.Thread):
             jsn = jsn[0]
 
         try:
-            jsn1 = json.loads(jsn)
-            data = json.loads(jsn1['message'])
+            data = json.loads(jsn)
             return data
         except ValueError:
             print "-- JSON DECODE ERROR %s" % jsn
