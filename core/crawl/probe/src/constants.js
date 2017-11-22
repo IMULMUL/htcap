@@ -41,7 +41,7 @@
         },
 
         // map input names to string generators. see generateRandomValues to see all available generators
-        inputNameMatchValue: [ // regexps NEED to be string to get passed to phantom page
+        inputNameMatchValue: [ // regexps NEED to be string to get passed to the page
             {name: 'mail', value: 'email'},
             {name: '((number)|(phone))|(^tel)', value: 'number'},
             {name: '(date)|(birth)', value: 'humandate'},

@@ -16,7 +16,7 @@
     exports.setProbe = function setProbe(options, constants) {
 
         /**
-         * EventLoop Manager
+         * Class EventLoop Manager
          * Responsibility:
          * Managing the eventLoop to ensure that every code execution (from the page or from the probe)
          * is completely done before launching anything else.
@@ -182,6 +182,8 @@
                         let element = mutationRecord.target;
                         // DEBUG:
                         // console.debug('eventLoop nodeMutated: attributes', _elementToString(element), mutationRecord.attributeName);
+
+                        // removing any previous trace of triggered event on this element
                         this._probe._triggeredPageEvents.forEach(function(pageEvent, index) {
                             if (pageEvent.element === element) {
                                 this._probe._triggeredPageEvents.splice(index, 1);
@@ -250,8 +252,6 @@
                 /** @type {PageEvent} */
                 this.triggerer = triggerer;
 
-                //this.username = null; // todo
-                //this.password = null;
             }
 
             /**
@@ -281,7 +281,6 @@
             }
 
         }
-
 
         /**
          * Class PageEvent
@@ -314,16 +313,19 @@
                 // DEBUG:
                 // console.debug('PageEvent triggering events for : ', _elementToString(this.element), this.eventName);
 
-                if ('createEvent' in document) {
-                    let evt = document.createEvent('HTMLEvents');
-                    evt.initEvent(this.eventName, true, false);
-                    this.element.dispatchEvent(evt);
-                } else {
-                    let eventName = 'on' + this.eventName;
-                    if (eventName in this.element && typeof this.element[eventName] === 'function') {
-                        this.element[eventName]();
-                    }
-                }
+                let event = new Event(this.eventName);
+                this.element.dispatchEvent(event);
+
+                // if ('createEvent' in document) {
+                //     let evt = document.createEvent('HTMLEvents');
+                //     evt.initEvent(this.eventName, true, false);
+                //     this.element.dispatchEvent(evt);
+                // } else {
+                //     let eventName = 'on' + this.eventName;
+                //     if (eventName in this.element && typeof this.element[eventName] === 'function') {
+                //         this.element[eventName]();
+                //     }
+                // }
             }
         }
 
@@ -458,7 +460,7 @@
                 formObj.data = formObj.data.join('&');
 
                 if (formObj.method === 'GET') {
-                    let url = _replaceUrlQuery(formObj.url, formObj.data);
+                    let url = this._replaceUrlQuery(formObj.url, formObj.data);
                     req = new Request('form', 'GET', url);
                 } else {
                     req = new Request('form', 'POST', formObj.url, formObj.data);
@@ -473,18 +475,23 @@
              * @param {String} eventName
              */
             addEventToMap(element, eventName) {
+                let isFound = false;
 
-                for (let a = 0; a < this._eventsMap.length; a++) {
-                    if (this._eventsMap[a].element === element) {
-                        this._eventsMap[a].events.push(eventName);
-                        return;
+                // searching for the existing element/event pair in the map
+                for (let i = 0; i < this._eventsMap.length && !isFound; i++) {
+                    if (this._eventsMap[i].element === element) {
+                        this._eventsMap[i].events.push(eventName);
+                        isFound = true;
                     }
                 }
 
-                this._eventsMap.push({
-                    element: element,
-                    events: [eventName],
-                });
+                // if no pair found, create it
+                if (!isFound) {
+                    this._eventsMap.push({
+                        element: element,
+                        events: [eventName],
+                    });
+                }
             }
 
             /**
@@ -618,6 +625,22 @@
                 }
             }
 
+            static _replaceUrlQuery(url, qs) {
+                let anchor = document.createElement('a');
+                anchor.href = url;
+                /*
+                 Example of content:
+                 anchor.protocol; // => "http:"
+                 anchor.host;     // => "example.com:3000"
+                 anchor.hostname; // => "example.com"
+                 anchor.port;     // => "3000"
+                 anchor.pathname; // => "/pathname/"
+                 anchor.hash;     // => "#hash"
+                 anchor.search;   // => "?search=test"
+                 */
+                return anchor.protocol + '//' + anchor.host + anchor.pathname + (qs ? '?' + qs : '') + anchor.hash;
+            }
+
             /**
              * schedule the trigger of the given event on the given element when the eventLoop is ready
              *
@@ -625,18 +648,11 @@
              * @private
              */
             _trigger(pageEvent) {
-                // workaround for a phantomjs bug on linux (so maybe not a phantom bug but some linux libs??).
-                // if you trigger click on input type=color everything freezes... maybe due to some
-                // color picker that pops up ...
-                if (!(pageEvent.element.tagName.toUpperCase() === 'INPUT' &&
-                        pageEvent.element.type.toLowerCase() === 'color' &&
-                        pageEvent.eventName.toLowerCase() === 'click')) {
 
-                    // trigger the given event only when there is some space in the event stack to avoid collision
-                    // and give time to things to resolve properly (since we trigger user driven event,
-                    // it is important to give time to the analysed page to breath between calls)
-                    this.eventLoopManager.scheduleEventTriggering(pageEvent);
-                }
+                // trigger the given event only when there is some space in the event stack to avoid collision
+                // and give time to things to resolve properly (since we trigger user driven event,
+                // it is important to give time to the analysed page to breath between calls)
+                this.eventLoopManager.scheduleEventTriggering(pageEvent);
             }
 
             /**
@@ -677,11 +693,34 @@
                     // DEBUG:
                     // console.debug('triggering events for : ' + _elementToString(element) + ' ' + eventName);
 
-                    if (!['load', 'unload', 'beforeunload'].includes(eventName) && !_objectInArray(this._triggeredPageEvents, pageEvent)) {
+                    if (!['load', 'unload', 'beforeunload'].includes(eventName) && !this._isPageEventAlreadyTriggered(pageEvent)) {
                         this._triggeredPageEvents.push(pageEvent);
                         this._trigger(pageEvent);
                     }
                 });
+            }
+
+            /**
+             * @param pageEvent
+             * @returns {boolean}
+             * @private
+             */
+            _isPageEventAlreadyTriggered(pageEvent) {
+                let array = this._triggeredPageEvents, result = false;
+                if (array.length >= 1) {
+                    for (let i = 0; (i < array.length && !result); i++) {
+                        let isAllKeysFound = true;
+                        for (let key in array[i]) {
+                            if (array[i][key] !== pageEvent[key]) {
+                                isAllKeysFound = false;
+                            }
+                        }
+                        if (isAllKeysFound) {
+                            result = true;
+                        }
+                    }
+                }
+                return result;
             }
 
             /**
@@ -782,57 +821,13 @@
                     (element.src ? 'src=' + element.src + ' ' : '') +
                     (element.action ? 'action=' + element.action + ' ' : '') +
                     (element.method ? 'method=' + element.method + ' ' : '') +
-                    (element.value ? 'v=' + element.value + ' ' : '') +
+                    (element.value ? 'value=' + element.value + ' ' : '') +
                     (text ? 'txt=' + text : '') +
                     ']';
             }
             return str;
         }
 
-        /**
-         *
-         * @param arr
-         * @param el
-         * @returns {boolean}
-         * @private
-         * @static
-         */
-        function _objectInArray(arr, el) {
-            if (arr.length === 0) {
-                return false;
-            }
-            if (typeof arr[0] !== 'object') {
-                return arr.indexOf(el) > -1;
-            }
-            for (var a = 0; a < arr.length; a++) {
-                var found = true;
-                for (var k in arr[a]) {
-                    if (arr[a][k] !== el[k]) {
-                        found = false;
-                    }
-                }
-                if (found) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        function _replaceUrlQuery(url, qs) {
-            let anchor = document.createElement('a');
-            anchor.href = url;
-            /*
-             Example of content:
-             anchor.protocol; // => "http:"
-             anchor.host;     // => "example.com:3000"
-             anchor.hostname; // => "example.com"
-             anchor.port;     // => "3000"
-             anchor.pathname; // => "/pathname/"
-             anchor.hash;     // => "#hash"
-             anchor.search;   // => "?search=test"
-             */
-            return anchor.protocol + '//' + anchor.host + anchor.pathname + (qs ? '?' + qs : '') + anchor.hash;
-        }
 
         function _initializeProbeHook(excludedUrls, overrideTimeoutFunctions, XHRTimeout) {
 
@@ -991,7 +986,7 @@
 
         if (!window.__PROBE_CONSTANTS__) {
             // DEBUG:
-            console.debug(`setting the probe on ${window.location.href}`);
+            // console.debug(`setting the probe on ${window.location.href}`);
 
             // adding constants to page
             window.__PROBE_CONSTANTS__ = constants;
@@ -1005,7 +1000,7 @@
             window.addEventListener('message', function(event) {
                 if (event.data.type && event.data.type === 'NavigationBlocked' && event.data.url) {
                     // DEBUG:
-                    console.debug('received an url from chrome extension: ' + event.data.url);
+                    // console.debug('received an url from chrome extension: ' + event.data.url);
                     window.__PROBE__.printLink(event.data.url);
                 }
             });
