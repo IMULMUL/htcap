@@ -12,7 +12,6 @@
 (function() {
     'use strict';
 
-
     exports.setProbe = function setProbe(options, constants) {
 
         /**
@@ -217,11 +216,6 @@
 
                     this._doneXHRQueue.push(request);
                 }
-            }
-
-            // eslint-disable-next-line no-unused-vars: off
-            inErrorXHR(request) {
-                console.log('eventLoop inErrorXHR');
             }
         }
 
@@ -821,7 +815,6 @@
             return str;
         }
 
-
         function _initializeProbeHook(excludedUrls, overrideTimeoutFunctions, XHRTimeout) {
 
             Node.prototype.__originalAddEventListener = Node.prototype.addEventListener;
@@ -860,15 +853,6 @@
                         // /!\ DONE means that the XHR finish but could have FAILED
                         window.__PROBE__.eventLoopManager.doneXHR(this);
                     }
-                });
-                this.addEventListener('error', function() {
-                    window.__PROBE__.eventLoopManager.inErrorXHR(this);
-                });
-                this.addEventListener('abort', function() {
-                    window.__PROBE__.eventLoopManager.inErrorXHR(this);
-                });
-                this.addEventListener('timeout', function() {
-                    window.__PROBE__.eventLoopManager.inErrorXHR(this);
                 });
 
                 this.timeout = XHRTimeout;
@@ -978,7 +962,7 @@
         }
 
         if (!window.__PROBE_CONSTANTS__ && window.location.href.startsWith('http')) {
-            // DEBUG:
+
             console.info(`setting the probe on ${window.location.href}`);
 
             // adding constants to page
@@ -992,7 +976,6 @@
             // listening for message from the navigation blocker extension
             window.addEventListener('message', function(event) {
                 if (event.data.type && event.data.type === 'NavigationBlocked' && event.data.url) {
-                    // DEBUG:
                     console.log('received an url from chrome extension: ' + event.data.url);
                     window.__PROBE__.printLink(event.data.url);
                 }
