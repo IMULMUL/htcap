@@ -1,6 +1,6 @@
 {
   "manifest_version": 2,
-  "name": "Probe extension - Navigation blocker",
+  "name": "JavaScript Probe extension - Navigation blocker",
   "version": "1.0",
   "permissions": [
     "webRequest",
