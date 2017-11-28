@@ -14,6 +14,7 @@
      */
     exports.getBrowserAndPage = function(puppeteer, proxy) {
         let browserArgs = [
+            '--no-sandbox',
             '--ignore-certificate-errors',
             '--ssl-version-max=tls1.3',
             '--ssl-version-min=tls1',
@@ -169,6 +170,9 @@
 
             // set function to return value from probe
             this._page.exposeFunction('__PROBE_FN_RETURN_REQUEST__', (request) => {
+                if (this._options.verbosity >= 2) {
+                    logger.info(`Found request: ${JSON.stringify(request[1])}`);
+                }
                 this.emit(Handler.Events.ProbeResult, request);
             });
 
