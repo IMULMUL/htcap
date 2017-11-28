@@ -4,7 +4,6 @@
  *     and {@link https://github.com/GoogleChrome/puppeteer/issues/686}
  *
  * @todo (nice to have):
- * - add a debug level
  * - store headers for every request (mainly cookies and referrer) to enable a better "replay"
  * - also analyse the error pages (40x and 50x)
  */
