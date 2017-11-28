@@ -44,6 +44,7 @@
                 this._sentXHRQueue = [];
                 this._doneXHRQueue = [];
                 this._emptyLoopCounter = 0;
+                this._isReadyToClose = false;
             }
 
 
@@ -57,7 +58,7 @@
             eventMessageHandler(eventMessage) {
 
                 // if it's our eventMessage
-                if (eventMessage.source === window && eventMessage.data.from === 'htcap') {
+                if (eventMessage.source === window && eventMessage.data.from === this._config.messageEvent.from) {
                     eventMessage.stopPropagation();
 
                     if (eventMessage.data.name === this._config.messageEvent.name) {
@@ -68,7 +69,7 @@
                             this._emptyLoopCounter += 1;
                         } else {
                             this._emptyLoopCounter = 0;
-                            this.doNextAction();
+                            this._doNextAction();
                         }
                     }
                 }
@@ -89,7 +90,7 @@
              * then if a event is waiting to be triggered, trigger it.
              * then close the manager
              */
-            doNextAction() {
+            _doNextAction() {
 
                 if (this._sentXHRQueue.length <= 0) { // avoiding noise
                     console.log('eventLoop doNextAction - done:', this._doneXHRQueue.length,
@@ -98,10 +99,16 @@
                 }
 
                 if (this._sentXHRQueue.length > 0) { // if there is XHR waiting to be resolved
+                    // there is still result so it is not ready to close
+                    this._isReadyToClose = false;
+
                     // releasing the eventLoop waiting for resolution
                     window.postMessage(this._config.messageEvent, '*');
 
                 } else if (this._doneXHRQueue.length > 0) { // if there is XHR done
+                    // there is still things to do so it is not ready to close
+                    this._isReadyToClose = false;
+
                     this._doneXHRQueue.shift();
 
                     window.__originalSetTimeout(function() {
@@ -109,6 +116,8 @@
                     }.bind(this), this._config.afterDoneXHRTimeout);
 
                 } else if (this._DOMAssessmentQueue.length > 0) { // if there is DOMAssessment waiting
+                    // there is still things to do so it is not ready to close
+                    this._isReadyToClose = false;
 
                     let element = this._DOMAssessmentQueue.shift();
 
@@ -119,6 +128,9 @@
                     window.postMessage(this._config.messageEvent, '*');
 
                 } else if (this._toBeTriggeredEventsQueue.length > 0) { // if there is event waiting
+                    // there is still things to do so it is not ready to close
+                    this._isReadyToClose = false;
+
                     // retrieving the next pageEvent
                     let pageEvent = this._toBeTriggeredEventsQueue.pop();
 
@@ -133,9 +145,15 @@
                     window.__originalSetTimeout(function() {
                         window.postMessage(this._config.messageEvent, '*');
                     }.bind(this), this._config.afterEventTriggeredTimeout);
-                } else {
+                } else if (this._isReadyToClose) {
                     console.info('eventLoop end');
                     window.__PROBE_FN_REQUEST_END__();
+                } else {
+                    console.log(`waiting ${this._config.beforeClosingEventLoopManagerTimeout} ms before ending the eventLoop…`);
+                    window.__originalSetTimeout(function() {
+                        this._isReadyToClose = true;
+                        window.postMessage(this._config.messageEvent, '*');
+                    }.bind(this), this._config.beforeClosingEventLoopManagerTimeout);
                 }
             }
 

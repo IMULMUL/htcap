@@ -31,6 +31,9 @@
 
     // handling SIGTERM signal
     process.on('SIGTERM', () => {
+        if (options.verbosity >= 1) {
+            logger.info('SIGTERM signal received');
+        }
         result.push({'status': 'error', 'code': 'interruptReceived'});
         _requestJobEnd();
     });

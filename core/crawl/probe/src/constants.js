@@ -6,12 +6,13 @@
 
         eventLoopConfig: {
             messageEvent: {
-                from: 'htcap',
+                from: 'javascript-probe',
                 name: 'event-loop-ready',
             },
             bufferCycleSize: 100, // number of event loop cycle between every new action proceed in the eventLoop
             afterEventTriggeredTimeout: 1, // after triggering an event, time in ms to wait before requesting another eventLoop cycle
-            afterDoneXHRTimeout: 10, // after a done XHR, time in ms to before requesting another eventLoop cycle
+            afterDoneXHRTimeout: 10, // after a done XHR, time in ms to wait before requesting another eventLoop cycle
+            beforeClosingEventLoopManagerTimeout: 200, // time in ms to wait before closing the event loop manager
         },
 
         // see: https://developer.mozilla.org/en-US/docs/Web/Events
