@@ -301,20 +301,84 @@
                 console.debug('PageEvent triggering events for : ', _elementToString(this.element), this.eventName);
 
                 let event = new Event(this.eventName);
-                this.element.dispatchEvent(event);
 
-                // if ('createEvent' in document) {
-                //     let evt = document.createEvent('HTMLEvents');
-                //     evt.initEvent(this.eventName, true, false);
-                //     this.element.dispatchEvent(evt);
-                // } else {
-                //     let eventName = 'on' + this.eventName;
-                //     if (eventName in this.element && typeof this.element[eventName] === 'function') {
-                //         this.element[eventName]();
-                //     }
-                // }
+                if (PageEvent.EVENT_NAME_TO_EVENT_TYPE[this.eventName]) {
+                    event = new PageEvent.EVENT_NAME_TO_EVENT_TYPE[this.eventName](this.eventName);
+                }
+                this.element.dispatchEvent(event);
             }
         }
+
+        /**
+         * constant EVENT_NAME_TO_EVENT_TYPE
+         * see: https://developer.mozilla.org/en-US/docs/Web/Events#Standard_events
+         */
+        Object.defineProperty(PageEvent, 'EVENT_NAME_TO_EVENT_TYPE', {
+            writable: false,
+            enumerable: true,
+            configurable: false,
+            value: {
+                'compositionend': CompositionEvent,
+                'compositionstart': CompositionEvent,
+                'compositionupdate': CompositionEvent,
+                'drag': DragEvent,
+                'dragend': DragEvent,
+                'dragenter': DragEvent,
+                'dragleave': DragEvent,
+                'dragover': DragEvent,
+                'dragstart': DragEvent,
+                'drop': DragEvent,
+                'hashchange': HashChangeEvent,
+                'keydown': KeyboardEvent,
+                'keypress': KeyboardEvent,
+                'keyup': KeyboardEvent,
+                'messageerror': MessageEvent,
+                'message': MessageEvent,
+                'click': MouseEvent,
+                'dblclick': MouseEvent,
+                'mousedown': MouseEvent,
+                'mouseenter': MouseEvent,
+                'mouseleave': MouseEvent,
+                'mousemove': MouseEvent,
+                'mouseout': MouseEvent,
+                'mouseover': MouseEvent,
+                'mouseup': MouseEvent,
+                'contextmenu': MouseEvent,
+                'show': MouseEvent,
+                'pagehide': PageTransitionEvent,
+                'pageshow': PageTransitionEvent,
+                'gotpointercapture': PointerEvent,
+                'lostpointercapture': PointerEvent,
+                'pointercancel': PointerEvent,
+                'pointerdown': PointerEvent,
+                'pointerenter': PointerEvent,
+                'pointerleave': PointerEvent,
+                'pointermove': PointerEvent,
+                'pointerout': PointerEvent,
+                'pointerover': PointerEvent,
+                'pointerup': PointerEvent,
+                'popstate': PopStateEvent,
+                'progress': ProgressEvent,
+                'loadend': ProgressEvent,
+                'loadstart': ProgressEvent,
+                'timeout': ProgressEvent,
+                'touchcancel': TouchEvent,
+                'touchend': TouchEvent,
+                'touchmove': TouchEvent,
+                'touchstart': TouchEvent,
+                'transitionend': TransitionEvent,
+                'abort': UIEvent,
+                'error': UIEvent,
+                'load': UIEvent,
+                'resize': UIEvent,
+                'scroll': UIEvent,
+                'select': UIEvent,
+                'unload': UIEvent,
+                'wheel': WheelEvent,
+            },
+        });
+
+        //see: https://developer.mozilla.org/en-US/docs/Web/Events#Standard_events
 
         /**
          * Class Probe

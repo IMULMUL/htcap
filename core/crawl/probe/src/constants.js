@@ -4,7 +4,6 @@
     exports.constants = {
         XHRTimeout: 5000,
 
-
         eventLoopConfig: {
             messageEvent: {
                 from: 'htcap',
@@ -15,24 +14,24 @@
             afterDoneXHRTimeout: 10, // after a done XHR, time in ms to before requesting another eventLoop cycle
         },
 
+        // see: https://developer.mozilla.org/en-US/docs/Web/Events
         mappableEvents: [
-            'abort', 'autocomplete', 'autocompleteerror', 'beforecopy', 'beforecut', 'beforepaste', 'blur',
-            'cancel', 'canplay', 'canplaythrough', 'change', 'click', 'close', 'contextmenu', 'copy', 'cuechange',
+            'abort', 'blur', 'canplay', 'canplaythrough', 'change', 'click', 'close', 'contextmenu', 'copy',
             'cut', 'dblclick', 'drag', 'dragend', 'dragenter', 'dragleave', 'dragover', 'dragstart', 'drop',
-            'durationchange', 'emptied', 'ended', 'error', 'focus', 'input', 'invalid', 'keydown', 'keypress',
-            'keyup', 'load', 'loadeddata', 'loadedmetadata', 'loadstart', 'mousedown', 'mouseenter',
-            'mouseleave', 'mousemove', 'mouseout', 'mouseover', 'mouseup', 'mousewheel', 'paste', 'pause',
-            'play', 'playing', 'progress', 'ratechange', 'reset', 'resize', 'scroll', 'search', 'seeked',
-            'seeking', 'select', 'selectstart', 'show', 'stalled', 'submit', 'suspend', 'timeupdate', 'toggle',
-            'volumechange', 'waiting', 'webkitfullscreenchange', 'webkitfullscreenerror', 'wheel',
+            'durationchange', 'emptied', 'ended', 'error', 'focus', 'fullscreenchange', 'fullscreenerror',
+            'input', 'invalid', 'keydown', 'keypress', 'keyup', 'load', 'loadeddata', 'loadedmetadata',
+            'loadstart', 'mousedown', 'mouseenter', 'mouseleave', 'mousemove', 'mouseout', 'mouseover',
+            'mouseup', 'paste', 'pause', 'play', 'playing', 'progress', 'ratechange', 'reset', 'resize',
+            'scroll', 'seeked', 'seeking', 'select', 'show', 'stalled', 'submit', 'suspend', 'timeupdate',
+            'volumechange', 'waiting', 'wheel',
         ],
 
         /* always trigger these events since event delegation mays "confuse" the triggering of mapped events */
         triggerableEvents: {
-            'button': ['click', 'keyup', 'keydown', 'mouseup', 'mousedown'],
+            'button': ['click', 'dblclick', 'keyup', 'keydown', 'mouseup', 'mousedown'],
             'select': ['change', 'click', 'keyup', 'keydown', 'mouseup', 'mousedown'],
             'input': ['change', 'click', 'blur', 'focus', 'keyup', 'keydown', 'mouseup', 'mousedown'],
-            'a': ['click', 'keyup', 'keydown', 'mouseup', 'mousedown'],
+            'a': ['click', 'dblclick', 'keyup', 'keydown', 'mouseup', 'mousedown'],
             'textarea': ['change', 'click', 'blur', 'focus', 'keyup', 'keydown', 'mouseup', 'mousedown'],
             'span': ['click', 'mouseup', 'mousedown'],
             'td': ['click', 'mouseup', 'mousedown'],
