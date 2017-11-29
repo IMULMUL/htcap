@@ -1,8 +1,7 @@
 (function() {
     'use strict';
 
-    const fs = require('fs'),
-        url = require('url');
+    const url = require('url');
 
     const ArgsParse = require('../node_modules/argparse').ArgumentParser;
 

@@ -137,9 +137,7 @@ class CrawlerThread(threading.Thread):
         if len(request.cookies) > 0:
             for cookie in request.cookies:
                 cookies.append(cookie.get_dict())
-            with open(self._cookie_file, 'w') as fil:
-                fil.write(json.dumps(cookies))
-            params.extend(("-c", self._cookie_file))
+            params.extend(("-c", json.dumps(cookies)))
 
         if request.http_auth:
             params.extend(("-p", request.http_auth))
@@ -147,6 +145,7 @@ class CrawlerThread(threading.Thread):
         if Shared.options['set_referer'] and request.referer:
             params.extend(("-r", request.referer))
 
+        params.append("-vv")
         params.append(url)
 
         return params
