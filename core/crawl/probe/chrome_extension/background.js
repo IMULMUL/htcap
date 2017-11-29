@@ -49,11 +49,11 @@
             // console.log('currentTab', currentTab);
             // console.log('details', details);
             // console.log('startingTabId', startingTabId);
-            // console.log(currentTab.url.startsWith('http') && !_isSameUrls(currentTab.url, details.url));
+            // console.log(details.url.startsWith('http') && details.type === 'sub_frame');
             // console.groupEnd();
 
-            // if the tab is loading content from somewhere else (ie. for a frame)
-            if (currentTab.url.startsWith('http') && !_isSameUrls(currentTab.url, details.url)) {
+            // if the content is loaded from sub-frame)
+            if (details.url.startsWith('http') && details.type === 'sub_frame') {
 
                 _notifyProbe(details.url, startingTabId || currentTab.id);
 
@@ -92,23 +92,6 @@
         urls: ['<all_urls>'],
         types: ['main_frame', 'sub_frame'], // only watching for "frame" type request
     }, ['blocking']);
-
-    /**
-     * compare 2 urls based on there href form WITHOUT the hash part
-     * @param {string} url1
-     * @param {string} url2
-     * @return {boolean}
-     * @private
-     */
-    function _isSameUrls(url1, url2) {
-        let cleanedUrl1 = new URL(url1),
-            cleanedUrl2 = new URL(url2);
-
-        cleanedUrl1.hash = '';
-        cleanedUrl2.hash = '';
-
-        return cleanedUrl1.href === cleanedUrl2.href;
-    }
 
     function _notifyProbe(url, tabId) {
 
