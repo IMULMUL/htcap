@@ -71,6 +71,10 @@
                             this._emptyLoopCounter = 0;
                             this._doNextAction();
                         }
+                    } else if (eventMessage.data.name === 'navigation-blocked') { // for message from the navigation blocker extension
+
+                        console.log('received an url from chrome extension: ' + eventMessage.data.url);
+                        this._probe.printLink(eventMessage.data.url);
                     }
                 }
             }
@@ -1045,13 +1049,6 @@
             // listening for messageEvent to trigger waiting events
             window.addEventListener('message', probe.eventLoopManager.eventMessageHandler.bind(probe.eventLoopManager), true);
 
-            // listening for message from the navigation blocker extension
-            window.addEventListener('message', function(event) {
-                if (event.data.type && event.data.type === 'NavigationBlocked' && event.data.url) {
-                    console.log('received an url from chrome extension: ' + event.data.url);
-                    window.__PROBE__.printLink(event.data.url);
-                }
-            });
 
             window.__PROBE__ = probe;
 
