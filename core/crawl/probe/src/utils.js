@@ -79,8 +79,8 @@
         argumentParser.addArgument(
             '-c',
             {
-                help: 'set cookies from file (json)',
-                dest: 'cookieFilePath',
+                help: 'set cookies (json format)',
+                dest: 'cookies',
                 defaultValue: '',
             },
         );
@@ -166,9 +166,8 @@
 
         options.inputValues = _generateRandomValues(options.random);
 
-        if (args.cookieFilePath !== '') {
-            let data = fs.readFileSync(args.cookieFilePath, 'utf8');
-            options.cookies = JSON.parse(data);
+        if (args.cookies !== '') {
+            options.cookies = JSON.parse(args.cookies);
         } else {
             options.cookies = [];
         }
