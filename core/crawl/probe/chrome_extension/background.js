@@ -25,6 +25,9 @@
             if (tab.url.startsWith('http') && changeInfo.status === 'complete') {
                 startingTabId = tabId;
                 tabs[startingTabId].haveBeenNavigated = true;
+
+                // create the message link with the probe
+                chrome.tabs.executeScript(tabId, {file: 'content.js'});
             }
         }
     }
@@ -99,9 +102,7 @@
         console.warn(`Navigation to ${url} blocked.`);
 
         // sending message to the probe
-        chrome.tabs.executeScript(tabId, {file: 'content.js'}, function() {
-            chrome.tabs.sendMessage(tabId, {url: url});
-        });
+        chrome.tabs.sendMessage(tabId, {url: url});
     }
 
 })();
