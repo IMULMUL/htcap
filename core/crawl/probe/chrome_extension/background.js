@@ -25,9 +25,6 @@
             if (tab.url.startsWith('http') && changeInfo.status === 'complete') {
                 startingTabId = tabId;
                 tabs[startingTabId].haveBeenNavigated = true;
-
-                // create the message link with the probe
-                chrome.tabs.executeScript(tabId, {file: 'content.js'});
             }
         }
     }
@@ -54,6 +51,9 @@
             // console.log('startingTabId', startingTabId);
             // console.log(details.url.startsWith('http') && details.type === 'sub_frame');
             // console.groupEnd();
+
+            // create the message link with the probe
+            chrome.tabs.executeScript(startingTabId || currentTab.id, {file: 'content.js', runAt: 'document_start'});
 
             // if the content is loaded from sub-frame)
             if (details.url.startsWith('http') && details.type === 'sub_frame') {
