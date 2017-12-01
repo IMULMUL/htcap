@@ -46,13 +46,15 @@
         }
         output.log('info', `${JSON.stringify(result)}`);
 
-        if (browser) {
-            browser.close()
-                .then(() => {
-                    process.exit(exitCode);
-                });
-        } else {
-            process.exit(exitCode);
+        if (!options.debug) { // keep the browser open for debug
+            if (browser) {
+                browser.close()
+                    .then(() => {
+                        process.exit(exitCode);
+                    });
+            } else {
+                process.exit(exitCode);
+            }
         }
     }
 
@@ -108,19 +110,19 @@
                         if (options.verbosity >= 1) {
                             logger.error(`Error during goto: ${error}`);
                         }
-                        result.push({'status': 'error', 'code': 'load', 'message': `error is ${error}`});
+                        result.push({'status': 'error', 'code': 'load', 'message': `${error}`});
                         _requestJobEnd(1);
                     });
             }, (error) => {
                 if (options.verbosity >= 1) {
                     logger.error(`Error during initialisation: ${error}`);
                 }
-                result.push({'status': 'error', 'code': 'probeError', 'message': `error is ${error}`});
+                result.push({'status': 'error', 'code': 'probeError', 'message': `${error}`});
                 _requestJobEnd(1);
             });
     }
 
-    pageHandler.getBrowserAndPage(puppeteer, options.proxyAddress)
+    pageHandler.getBrowserAndPage(puppeteer, options.proxyAddress, options.debug)
         .then(run);
 
 })();

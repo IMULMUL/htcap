@@ -12,7 +12,7 @@
      * @param {String} proxy - in format: `hostname:port`
      * @return {Promise.<TResult>|*}
      */
-    exports.getBrowserAndPage = function(puppeteer, proxy) {
+    exports.getBrowserAndPage = function(puppeteer, proxy, debug) {
         let browserArgs = [
             '--no-sandbox',     // in docker
             '--disable-gpu',        // headless
@@ -27,15 +27,23 @@
             `--disable-extensions-except=${__dirname}/../chrome_extension/`,    // load extension
         ];
 
+
         if (proxy) {
             browserArgs.push(`--proxy-server=${proxy}`);
         }
 
-        return puppeteer.launch({
+        let launchParams = {
             headless: false,
             ignoreHTTPSErrors: true,
             args: browserArgs,
-        })
+        };
+
+        if (debug) {
+            launchParams['dumpio'] = true;
+            launchParams['devtools'] = true;
+        }
+
+        return puppeteer.launch(launchParams)
             .then(createdBrowser => {
                 return createdBrowser.newPage()
                     .then(createdPage => {

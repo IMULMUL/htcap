@@ -137,6 +137,17 @@
         );
 
         argumentParser.addArgument(
+            '--debug',
+            {
+                help: 'activate debug mode',
+                dest: 'debug',
+                defaultValue: false,
+                nargs: 0,
+                action: 'storeTrue',
+            },
+        );
+
+        argumentParser.addArgument(
             'startUrl',
             {
                 help: 'starting url',
@@ -162,6 +173,7 @@
         options.excludedUrls = args.excludedUrls !== '' ? args.excludedUrls.split(',') : [];
         options.overrideTimeoutFunctions = args.overrideTimeoutFunctions;
         options.verbosity = args.verbosity;
+        options.debug = args.debug;
 
         options.inputValues = _generateRandomValues(options.random);
 
