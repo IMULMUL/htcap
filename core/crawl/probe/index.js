@@ -100,7 +100,7 @@
                                 _requestJobEnd();
                             }
                         } else {
-                            result.push({'status': 'error', 'code': 'load', 'message': `response code is ${response.status}`});
+                            result.push({'status': 'error', 'code': 'responseCode', 'message': `${response.status}`});
                             _requestJobEnd(1);
                         }
                     },
