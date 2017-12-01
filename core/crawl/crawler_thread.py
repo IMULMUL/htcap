@@ -145,7 +145,8 @@ class CrawlerThread(threading.Thread):
         if Shared.options['set_referer'] and request.referer:
             params.extend(("-r", request.referer))
 
-        params.append("-vv")
+        # DEBUG:
+        # params.append("-vv")
         params.append(url)
 
         return params
@@ -157,11 +158,12 @@ class CrawlerThread(threading.Thread):
         params = self._set_probe_params(request)
 
         while retries:
-
+            # DEBUG:
             # print("### INPUT: %s" % repr(Shared.probe_cmd + params))
             cmd = CommandExecutor(Shared.probe_cmd + params)
             jsn = cmd.execute(Shared.options['process_timeout'] + 2)
 
+            # DEBUG:
             # print("### OUTPUT: %s" % repr(jsn))
 
             if jsn is None:
