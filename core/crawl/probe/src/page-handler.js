@@ -14,14 +14,17 @@
      */
     exports.getBrowserAndPage = function(puppeteer, proxy) {
         let browserArgs = [
-            '--no-sandbox',
-            '--ignore-certificate-errors',
-            '--ssl-version-max=tls1.3',
-            '--ssl-version-min=tls1',
-            '--disable-web-security',
-            '--allow-running-insecure-content',
-            `--load-extension=${__dirname}/../chrome_extension/`,
-            `--disable-extensions-except=${__dirname}/../chrome_extension/`,
+            '--no-sandbox',     // in docker
+            '--disable-gpu',        // headless
+            '--hide-scrollbars',    // headless
+            '--mute-audio',         // headless
+            '--ignore-certificate-errors',      // no security
+            '--ssl-version-max=tls1.3',         // no security
+            '--ssl-version-min=tls1',           // no security
+            '--disable-web-security',           // no security
+            '--allow-running-insecure-content', // no security
+            `--load-extension=${__dirname}/../chrome_extension/`,               // load extension
+            `--disable-extensions-except=${__dirname}/../chrome_extension/`,    // load extension
         ];
 
         if (proxy) {
@@ -59,6 +62,7 @@
                 if (this._options.verbosity >= 3) {
                     logger.debug(`intercepted request: ${interceptedRequest.resourceType} ${interceptedRequest.url}`);
                 }
+
                 // block image loading
                 if (interceptedRequest.resourceType === 'image') {
                     interceptedRequest.abort();
@@ -78,6 +82,8 @@
                             interceptedRequest.abort();
                         });
                     // Set the first request as POST or/and Headers
+                    // Since the feature is missing, handling it here.
+                    // https://github.com/GoogleChrome/puppeteer/issues/1062
                 } else if (this._reformatFirstRequest) {
 
                     let overrides = {headers: interceptedRequest.headers};
