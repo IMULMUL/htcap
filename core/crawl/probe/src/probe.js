@@ -238,19 +238,21 @@
             /**
              *  @param {String}  type
              * @param {String} method
-             * @param {String} url
+             * @param {String} urlString
              * @param {Object=} data
              * @param {PageEvent=} triggerer - the PageEvent triggered to generate the request
              * @constructor
              */
-            constructor(type, method, url, data, triggerer) {
+            constructor(type, method, urlString, data, triggerer) {
                 this.type = type;
                 this.method = method;
-                this.url = url;
                 this.data = data || null;
 
                 /** @type {PageEvent} */
                 this.triggerer = triggerer;
+
+                let u = _getAbsoluteUrl(urlString, true);
+                this.url = u.href;
 
             }
 
@@ -424,36 +426,37 @@
             printJSONP(node) {
 
                 if (node.nodeName.toLowerCase() === 'script' && node.hasAttribute('src')) {
-                    let a = document.createElement('a'),
-                        src = node.getAttribute('src');
+                    try {
+                        let u = _getAbsoluteUrl(node.getAttribute('src'));
 
-                    a.href = src;
-
-                    // JSONP must have a querystring...
-                    if (a.search) {
-                        let req = new Request('jsonp', 'GET', src, null, this.getLastTriggerPageEvent());
-                        this.printRequest(req);
+                        // JSONP must have a querystring...
+                        if (u.search && u.search !== '') {
+                            let req = new Request('jsonp', 'GET', u.href, null, this.getLastTriggerPageEvent());
+                            this.printRequest(req);
+                        }
+                    } catch (e) {
+                        console.warn(e.message);
                     }
+
                 }
             }
 
             printLink(url) {
-                let req;
-
-                url = url.split('#')[0];
-
-                if (!(url.match(/^[a-z0-9\-_]+:/i) && !url.match(/(^https?)|(^ftps?):/i))) {
-                    req = new Request('link', 'GET', url, undefined, this.getLastTriggerPageEvent());
-                }
-
-                if (req) {
+                try {
+                    let req = new Request('link', 'GET', url, undefined, this.getLastTriggerPageEvent());
                     this.printRequest(req);
+                } catch (e) {
+                    console.warn(e.message);
                 }
             }
 
             printWebsocket(url) {
-                let req = new Request('websocket', 'GET', url, null, this.getLastTriggerPageEvent());
-                this.printRequest(req);
+                try {
+                    let req = new Request('websocket', 'GET', url, null, this.getLastTriggerPageEvent());
+                    this.printRequest(req);
+                } catch (e) {
+                    console.warn(e.message);
+                }
             }
 
             getRandomValue(type) {
@@ -523,8 +526,9 @@
                 formObj.data = formObj.data.join('&');
 
                 if (formObj.method === 'GET') {
-                    let url = this._replaceUrlQuery(formObj.url, formObj.data);
-                    req = new Request('form', 'GET', url);
+                    let url = _getAbsoluteUrl(formObj.url);
+                    url.search = formObj.data;
+                    req = new Request('form', 'GET', url.href);
                 } else {
                     req = new Request('form', 'POST', formObj.url, formObj.data);
                 }
@@ -575,27 +579,6 @@
                 this.eventLoopManager.start();
             }
 
-            removeUrlParameter(url, par) {
-                let anchor = document.createElement('a');
-                anchor.href = url;
-
-                let pars = anchor.search.substr(1)
-                    .split(/(?:&amp;|&)+/);
-
-                for (let a = pars.length - 1; a >= 0; a--) {
-                    if (pars[a].split('=')[0] === par) {
-                        pars.splice(a, 1);
-                    }
-                }
-
-                return anchor.protocol + '//' + anchor.host + anchor.pathname + (pars.length > 0 ? '?' + pars.join('&') : '') + anchor.hash;
-            }
-
-            getAbsoluteUrl(url) {
-                let anchor = document.createElement('a');
-                anchor.href = url;
-                return anchor.href;
-            }
 
             /**
              * @param {Element} element
@@ -686,22 +669,6 @@
 
                     triggerChange();
                 }
-            }
-
-            static _replaceUrlQuery(url, qs) {
-                let anchor = document.createElement('a');
-                anchor.href = url;
-                /*
-                 Example of content:
-                 anchor.protocol; // => "http:"
-                 anchor.host;     // => "example.com:3000"
-                 anchor.hostname; // => "example.com"
-                 anchor.port;     // => "3000"
-                 anchor.pathname; // => "/pathname/"
-                 anchor.hash;     // => "#hash"
-                 anchor.search;   // => "?search=test"
-                 */
-                return anchor.protocol + '//' + anchor.host + anchor.pathname + (qs ? '?' + qs : '') + anchor.hash;
             }
 
             /**
@@ -807,7 +774,11 @@
              */
             _printRequestFromForm(element) {
                 if (element.tagName.toLowerCase() === 'form') {
-                    this.printRequest(this.getFormAsRequest(element));
+                    try {
+                        this.printRequest(this.getFormAsRequest(element));
+                    } catch (e) {
+                        console.warn(e.message);
+                    }
                 }
             }
 
@@ -847,6 +818,20 @@
                     this._triggerElementEvents(element);
                 }
             }
+        }
+
+        /**
+         * return an absolute url for the provided url string
+         * @param url
+         * @param clearHash - remove the hash part if true
+         * @return {URL}
+         */
+        function _getAbsoluteUrl(url, clearHash) {
+            let u = new URL(url, window.location.href);
+            if (clearHash === true) {
+                u.hash = '';
+            }
+            return u;
         }
 
         /**
@@ -915,25 +900,27 @@
 
             XMLHttpRequest.prototype.__originalOpen = XMLHttpRequest.prototype.open;
             XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
+                try {
+                    this.__request = new Request('xhr', method, url);
 
-                let _url = window.__PROBE__.removeUrlParameter(url, '_');
-                this.__request = new Request('xhr', method, _url);
+                    // adding XHR listener
+                    this.addEventListener('readystatechange', function() {
+                        // if not finish, it's open
+                        // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/readyState
+                        if (this.readyState >= 1 && this.readyState < 4) {
+                            window.__PROBE__.eventLoopManager.sentXHR(this);
+                        } else if (this.readyState === 4) {
+                            // /!\ DONE means that the XHR finish but could have FAILED
+                            window.__PROBE__.eventLoopManager.doneXHR(this);
+                        }
+                    });
 
-                // adding XHR listener
-                this.addEventListener('readystatechange', function() {
-                    // if not finish, it's open
-                    // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/readyState
-                    if (this.readyState >= 1 && this.readyState < 4) {
-                        window.__PROBE__.eventLoopManager.sentXHR(this);
-                    } else if (this.readyState === 4) {
-                        // /!\ DONE means that the XHR finish but could have FAILED
-                        window.__PROBE__.eventLoopManager.doneXHR(this);
-                    }
-                });
-
-                this.timeout = XHRTimeout;
-
+                    this.timeout = XHRTimeout;
+                } catch (e) {
+                    console.warn(e.message);
+                }
                 return this.__originalOpen(method, url, async, user, password);
+
             };
 
             XMLHttpRequest.prototype.__originalSend = XMLHttpRequest.prototype.send;
@@ -941,12 +928,17 @@
                 this.__request.data = data;
                 this.__request.triggerer = window.__PROBE__.getLastTriggerPageEvent();
 
-                let absoluteUrl = window.__PROBE__.getAbsoluteUrl(this.__request.url);
-                excludedUrls.forEach((url) => {
-                    if (absoluteUrl.match(url)) {
-                        this.__skipped = true;
-                    }
-                });
+                try {
+                    let absoluteUrl = _getAbsoluteUrl(this.__request.url).href;
+                    excludedUrls.forEach((url) => {
+                        if (absoluteUrl.match(url)) {
+                            this.__skipped = true;
+                        }
+                    });
+                } catch (e) {
+                    console.warn(e.message);
+                    this.__skipped = true;
+                }
 
                 // check if request has already been sent
                 let requestKey = this.__request.key;
@@ -1006,7 +998,12 @@
 
             HTMLFormElement.prototype.__originalSubmit = HTMLFormElement.prototype.submit;
             HTMLFormElement.prototype.submit = function() {
-                window.__PROBE__.printRequest(window.__PROBE__.getFormAsRequest(this));
+                try {
+                    window.__PROBE__.printRequest(window.__PROBE__.getFormAsRequest(this));
+                } catch
+                (e) {
+                    console.warn(e.message);
+                }
                 return this.__originalSubmit();
             };
 
