@@ -9,10 +9,32 @@
                 from: 'javascript-probe',
                 name: 'event-loop-ready',
             },
-            bufferCycleSize: 150, // number of event loop cycle between every new action proceed in the eventLoop
-            afterEventTriggeredTimeout: 1, // after triggering an event, time in ms to wait before requesting another eventLoop cycle
-            afterDoneXHRTimeout: 10, // after a done XHR, time in ms to wait before requesting another eventLoop cycle
-            beforeClosingEventLoopManagerTimeout: 200, // time in ms to wait before closing the event loop manager
+
+            /**
+             * number of event loop cycle between every new action proceed in the eventLoop
+             * lower is better for speed
+             * higher is better for discovery
+             */
+            bufferCycleSize: 150,
+
+            /**
+             * in milliseconds,
+             * after trigger of an event, time to wait before requesting another eventLoop cycle
+             * lower is better for speed
+             */
+            afterEventTriggeredTimeout: 10,
+
+            /**
+             * in milliseconds,
+             * after a done XHR, time to wait before requesting another eventLoop cycle
+             */
+            afterDoneXHRTimeout: 10,
+
+            /**
+             * in milliseconds,
+             * time to wait before closing the event loop manager (when everything seems to be done)
+             */
+            beforeClosingEventLoopManagerTimeout: 500,
         },
 
         // see: https://developer.mozilla.org/en-US/docs/Web/Events
@@ -27,7 +49,9 @@
             'volumechange', 'waiting', 'wheel',
         ],
 
-        /* always trigger these events since event delegation mays "confuse" the triggering of mapped events */
+        /**
+         *  always trigger these events on the given element
+         */
         triggerableEvents: {
             'button': ['click', 'dblclick', 'keyup', 'keydown', 'mouseup', 'mousedown'],
             'select': ['change', 'click', 'keyup', 'keydown', 'mouseup', 'mousedown'],
@@ -52,6 +76,10 @@
             {name: '(surname)|(lastname)', value: 'surname'},
         ],
 
+        /**
+         * in pixels,
+         * viewport size of the browser
+         */
         viewport: {
             width: 1920,
             height: 1080,
