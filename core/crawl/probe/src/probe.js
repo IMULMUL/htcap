@@ -828,6 +828,10 @@
          */
         function _getAbsoluteUrl(url, clearHash) {
             let u = new URL(url, window.location.href);
+
+            if (!u.protocol.match(/^(https?:|s?ftp:|javascript:)/)) {
+                throw new TypeError(`Wrong protocol type: ${u.protocol}`);
+            }
             if (clearHash === true) {
                 u.hash = '';
             }
