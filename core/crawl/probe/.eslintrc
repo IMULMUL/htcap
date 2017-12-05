@@ -14,7 +14,8 @@
     "by": true,
     "spyOn": true,
     "WebKitMutationObserver": true,
-    "chrome": true
+    "chrome": true,
+    "PointerEvent": true
   },
   "rules": {
     "semi": "error",
