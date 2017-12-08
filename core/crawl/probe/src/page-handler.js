@@ -14,15 +14,17 @@
      */
     exports.getBrowserAndPage = function(puppeteer, proxy, debug) {
         let browserArgs = [
-            '--no-sandbox',     // in docker
+            '--no-sandbox',             // in docker
+            '--disable-setuid-sandbox', // in docker
             '--disable-gpu',        // headless
             '--hide-scrollbars',    // headless
             '--mute-audio',         // headless
-            '--ignore-certificate-errors',      // no security
-            '--ssl-version-max=tls1.3',         // no security
-            '--ssl-version-min=tls1',           // no security
-            '--disable-web-security',           // no security
-            '--allow-running-insecure-content', // no security
+            '--ignore-certificate-errors',              // no security
+            '--ignore-certificate-errors-spki-list ',   // no security
+            '--ssl-version-max=tls1.3',                 // no security
+            '--ssl-version-min=tls1',                   // no security
+            '--disable-web-security',                   // no security
+            '--allow-running-insecure-content',         // no security
             `--load-extension=${__dirname}/../chrome_extension/`,               // load extension
             `--disable-extensions-except=${__dirname}/../chrome_extension/`,    // load extension
         ];
