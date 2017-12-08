@@ -75,6 +75,9 @@
 
                 // block image loading
                 if (interceptedRequest.resourceType === 'image') {
+                    if (this._options.verbosity >= 3) {
+                        logger.debug(`abort request: ${interceptedRequest.resourceType} ${interceptedRequest.url}`);
+                    }
                     interceptedRequest.abort();
 
                     // Block redirect
@@ -88,6 +91,10 @@
                                 status = {'status': 'ok', 'redirect': interceptedRequest.url};
                             this.emit(Handler.Events.ProbeResult, cookiesResult);
                             this.emit(Handler.Events.Finished, 0, status);
+
+                            if (this._options.verbosity >= 3) {
+                                logger.debug(`abort request: ${interceptedRequest.resourceType} ${interceptedRequest.url}`);
+                            }
 
                             interceptedRequest.abort();
                         });
@@ -107,12 +114,20 @@
                         overrides.headers['Referer'] = this._options.referer;
                     }
 
+                    if (this._options.verbosity >= 3) {
+                        logger.debug(`accept request with overrides: ${interceptedRequest.resourceType} ${interceptedRequest.url}`);
+                    }
+
                     interceptedRequest.continue(overrides)
                         .then(() => {
                             this._reformatFirstRequest = false;
                         });
 
                 } else {
+
+                    if (this._options.verbosity >= 3) {
+                        logger.debug(`accept request: ${interceptedRequest.resourceType} ${interceptedRequest.url}`);
+                    }
                     interceptedRequest.continue();
                 }
 
