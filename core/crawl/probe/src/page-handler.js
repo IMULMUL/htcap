@@ -69,13 +69,13 @@
 
         initialize() {
             this._page.on('request', interceptedRequest => {
-                if (this._options.verbosity >= 3) {
+                if (this._options.verbosity >= 2) {
                     logger.debug(`intercepted request: ${interceptedRequest.resourceType} ${interceptedRequest.url}`);
                 }
 
                 // block image loading
                 if (interceptedRequest.resourceType === 'image') {
-                    if (this._options.verbosity >= 3) {
+                    if (this._options.verbosity >= 2) {
                         logger.debug(`abort request: ${interceptedRequest.resourceType} ${interceptedRequest.url}`);
                     }
                     interceptedRequest.abort();
@@ -114,7 +114,7 @@
                         overrides.headers['Referer'] = this._options.referer;
                     }
 
-                    if (this._options.verbosity >= 3) {
+                    if (this._options.verbosity >= 2) {
                         logger.debug(`accept request with overrides: ${interceptedRequest.resourceType} ${interceptedRequest.url}`);
                     }
 
@@ -125,7 +125,7 @@
 
                 } else {
 
-                    if (this._options.verbosity >= 3) {
+                    if (this._options.verbosity >= 2) {
                         logger.debug(`accept request: ${interceptedRequest.resourceType} ${interceptedRequest.url}`);
                     }
                     interceptedRequest.continue();
@@ -155,7 +155,7 @@
             });
 
             this._page.on('framenavigated', frameTo => {
-                if (this._options.verbosity >= 3) {
+                if (this._options.verbosity >= 2) {
                     logger.debug(`framenavigated to ${frameTo.url()}`);
                 }
             });
@@ -175,19 +175,19 @@
             });
 
             this._page.on('frameattached', frameTo => {
-                if (this._options.verbosity >= 3) {
+                if (this._options.verbosity >= 2) {
                     logger.debug(`frameattached to ${frameTo.url()}`);
                 }
             });
 
             this._page.on('requestfailed', failedRequest => {
-                if (this._options.verbosity >= 3) {
+                if (this._options.verbosity >= 2) {
                     logger.debug(`requestfailed: ${failedRequest.url}`);
                 }
             });
 
             this._page.on('requestfinished', finishedRequest => {
-                if (this._options.verbosity >= 3) {
+                if (this._options.verbosity >= 2) {
                     logger.debug(`requestfinished: ${finishedRequest.response().status}, ${finishedRequest.method} ${finishedRequest.url}`);
                 }
             });
