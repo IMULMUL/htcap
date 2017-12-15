@@ -1,3 +1,4 @@
+/*eslint no-console: off */
 (function() {
     'use strict';
 
@@ -45,12 +46,12 @@
         if (currentTab) {
 
             // DEBUG:
-            // console.group();
-            // console.log('currentTab', currentTab);
-            // console.log('details', details);
-            // console.log('startingTabId', startingTabId);
-            // console.log(details.url.startsWith('http') && details.type === 'sub_frame');
-            // console.groupEnd();
+            console.group();
+            console.log('currentTab', currentTab);
+            console.log('details', details);
+            console.log('startingTabId', startingTabId);
+            console.log(details.url.startsWith('http') && details.type === 'sub_frame');
+            console.groupEnd();
 
             // create the message link with the probe
             chrome.tabs.executeScript(startingTabId || currentTab.id, {file: 'content.js', runAt: 'document_start'});

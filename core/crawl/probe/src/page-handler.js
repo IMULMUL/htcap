@@ -10,6 +10,7 @@
      *
      * @param {Puppeteer} puppeteer
      * @param {String} proxy - in format: `hostname:port`
+     * @param {boolean} debug - activate debug mode
      * @return {Promise.<TResult>|*}
      */
     exports.getBrowserAndPage = function(puppeteer, proxy, debug) {
