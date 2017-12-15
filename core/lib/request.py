@@ -178,17 +178,6 @@ class Request(object):
         return tokens
 
     # UNUSED
-    def compare_html(self, other):
-        if not other: return False
-
-        if not self.html and not other.html: return True
-
-        if self.html and other.html:
-            return self._html_hash.distance(other._html_hash) <= 2
-
-        return False
-
-    # UNUSED
     def is_similar(self, other):
         # is equal .. so not similar
         if self == other: return False

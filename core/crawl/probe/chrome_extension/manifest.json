@@ -1,0 +1,18 @@
+{
+  "manifest_version": 2,
+  "name": "JavaScript Probe extension - Navigation blocker",
+  "version": "1.0",
+  "license": "GPL-2.0",
+  "permissions": [
+    "webRequest",
+    "webRequestBlocking",
+    "<all_urls>",
+    "tabs"
+  ],
+  "background": {
+    "persistent": true,
+    "scripts": [
+      "background.js"
+    ]
+  }
+}

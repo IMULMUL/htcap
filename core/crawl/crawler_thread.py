@@ -30,6 +30,8 @@ from core.lib.shell import CommandExecutor
 
 
 # TODO: use NamedTemporaryFile for self._cookie_file
+# from core.lib.utils import cmd_to_str
+
 
 class CrawlerThread(threading.Thread):
     _PROCESS_RETRIES_INTERVAL = 0.5
@@ -69,10 +71,6 @@ class CrawlerThread(threading.Thread):
                 if probe.status == "ok" or probe.errcode == ERROR_PROBE_TO:
 
                     requests = probe.requests
-
-                    if probe.html:
-                        request.html = probe.html
-
                     if len(probe.user_output) > 0:
                         request.user_output = probe.user_output
 
@@ -126,26 +124,10 @@ class CrawlerThread(threading.Thread):
 
         return request
 
-    @staticmethod
-    def _load_probe_json(jsn):
-        jsn = jsn.strip()
-        if not jsn:
-            jsn = "["
-        if jsn[-1] != "]":
-            jsn += '{"status":"ok", "partialcontent":true}]'
-        try:
-            return json.loads(jsn)
-        except Exception:
-            # print "-- JSON DECODE ERROR %s" % jsn
-            raise
-
-    def _send_probe(self, request, errors):
-
-        url = request.url
-        probe = None
-        retries = CrawlerThread._PROCESS_RETRIES
+    def _set_probe_params(self, request):
         params = []
         cookies = []
+        url = request.url
 
         if request.method == "POST":
             params.append("-P")
@@ -155,11 +137,7 @@ class CrawlerThread(threading.Thread):
         if len(request.cookies) > 0:
             for cookie in request.cookies:
                 cookies.append(cookie.get_dict())
-
-            with open(self._cookie_file, 'w') as fil:
-                fil.write(json.dumps(cookies))
-
-            params.extend(("-c", self._cookie_file))
+            params.extend(("-c", json.dumps(cookies)))
 
         if request.http_auth:
             params.extend(("-p", request.http_auth))
@@ -167,27 +145,34 @@ class CrawlerThread(threading.Thread):
         if Shared.options['set_referer'] and request.referer:
             params.extend(("-r", request.referer))
 
-        params.extend(("-i", str(request.db_id)))
-
+        # DEBUG:
+        # params.append("-vv")
         params.append(url)
 
+        return params
+
+    def _send_probe(self, request, errors):
+
+        probe = None
+        retries = CrawlerThread._PROCESS_RETRIES
+        params = self._set_probe_params(request)
+
         while retries:
-
-            # print cmd_to_str(Shared.probe_cmd + params)
-
+            # DEBUG:
+            # print("### INPUT: %s" % repr(Shared.probe_cmd + params))
             cmd = CommandExecutor(Shared.probe_cmd + params)
             jsn = cmd.execute(Shared.options['process_timeout'] + 2)
 
+            # DEBUG:
+            # print("### OUTPUT: %s" % repr(jsn))
+
             if jsn is None:
-                errors.appnd(ERROR_PROBEKILLED)
+                errors.append(ERROR_PROBEKILLED)
                 sleep(CrawlerThread._PROCESS_RETRIES_INTERVAL)  # ... ???
                 retries -= 1
                 continue
-
-            # try to decode json also after an exception .. sometimes phantom crashes BUT returns a valid json ..
-            if jsn and type(jsn) is not str:
-                jsn = jsn[0]
-            probe_array = self._load_probe_json(jsn)
+            else:
+                probe_array = self._load_probe_json(jsn)
 
             if probe_array:
                 probe = Probe(probe_array, request)
@@ -197,10 +182,23 @@ class CrawlerThread(threading.Thread):
 
                 errors.append(probe.errcode)
 
-                if probe.errcode in (ERROR_CONTENTTYPE, ERROR_PROBE_TO):
+                if probe.errcode in (ERROR_CONTENTTYPE, ERROR_PROBE_TO, ERROR_FORCE_STOP):
                     break
 
             sleep(CrawlerThread._PROCESS_RETRIES_INTERVAL)
             retries -= 1
-
         return probe
+
+    @staticmethod
+    def _load_probe_json(jsn):
+
+        if isinstance(jsn, tuple):
+            jsn = jsn[0]
+
+        try:
+            data = json.loads(jsn)
+            return data
+        except ValueError:
+            print "-- JSON DECODE ERROR %s" % jsn
+        except Exception:
+            raise
