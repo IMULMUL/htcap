@@ -1,32 +1,40 @@
 ## HTCAP
 
-Htcap is a web application scanner able to crawl single page application (SPA) in a recursive manner by intercepting ajax calls and DOM changes.  
+Htcap is a web application scanner able to crawl single page application (SPA) in a recursive manner by intercepting xhr calls and DOM changes.  
 Htcap is not just another vulnerability scanner since it's focused mainly on the crawling process and uses external tools to discover vulnerabilities. It's designed to be a tool for both manual and automated penetration test of modern web applications.
 
 More infos at [htcap.org](http://htcap.org).
+
+### Difference with the upstream version
+
+* Use Chrome + Puppeteer instead of PhantomJS as crawl engine
+* Add option to restart/complete a crawl
+* Rewrite the injected code of the javascript crawler to take into account the [javascript event loop](https://www.youtube.com/watch?v=8aGhZQkoFbQ) (ie. javascript is async, stop using `setTimeout` calls) and make use of the [DOM mutation event handler](https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver)
+* Drop the flimsy supported feature "custom user script" in the crawler
+* Add unittest for the crawler part
+* Mainly this fixes issues (and other): [#9](https://github.com/segment-srl/htcap/issues/9), [#11](https://github.com/segment-srl/htcap/issues/11), [#16](https://github.com/segment-srl/htcap/issues/16), [#19](https://github.com/segment-srl/htcap/issues/19), [#22](https://github.com/segment-srl/htcap/issues/22), [#23](https://github.com/segment-srl/htcap/issues/23), [#28](https://github.com/segment-srl/htcap/issues/28) and [#31](https://github.com/segment-srl/htcap/issues/31)
 
 ## SETUP
 
 ### Requirements
 
  1. Python 2.7
- 2. PhantomJS v2 (it is recommended to use the version provided by the project himself)
+ 2. NodeJS v8.9.4 (for the crawler)
  3. Sqlmap (for sqlmap scanner module)
  4. Arachni (for arachni scanner module)
 
-PhantomJs can be downloaded [here](http://phantomjs.org//download.html). It comes as a self-contained executable with all libraries linked statically, so there is no need to install or compile anything else.  
-There is [a known bug](https://github.com/segment-srl/htcap/issues/11) with the PhantomJS provided by the ubuntu package, it is recommended to use the version provided by the project himself.
-
-### Download and Run
+### Installation
 
 ```console
-$ git clone https://github.com/segment-srl/htcap.git htcap
-$ htcap/htcap.py
+git clone git@github.com:delvelabs/htcap.git htcap
+cd htcap
+pip install -r requirements.txt
+cd core/crawl/probe/
+npm install
 ```
 
-## DOCUMENTATION
-
-Documentation, examples and demos can be found at the official website [http://htcap.org](http://htcap.org).
+## Documentation
+Try `python htcap.py -h` for help
 
 ## LICENSE
 
