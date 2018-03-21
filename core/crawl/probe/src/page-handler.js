@@ -71,30 +71,30 @@
         initialize() {
             this._page.on('request', interceptedRequest => {
                 if (this._options.verbosity >= 2) {
-                    logger.debug(`intercepted request: ${interceptedRequest.resourceType} ${interceptedRequest.url}`);
+                    logger.debug(`intercepted request: ${interceptedRequest.resourceType()} ${interceptedRequest.url()}`);
                 }
 
                 // block image loading
-                if (interceptedRequest.resourceType === 'image') {
+                if (interceptedRequest.resourceType() === 'image') {
                     if (this._options.verbosity >= 2) {
-                        logger.debug(`abort request: ${interceptedRequest.resourceType} ${interceptedRequest.url}`);
+                        logger.debug(`abort request: ${interceptedRequest.resourceType()} ${interceptedRequest.url()}`);
                     }
                     interceptedRequest.abort();
 
                     // Block redirect
                     // Since no option exist in puppeteer, this is the workaround proposed here:
                     // https://github.com/GoogleChrome/puppeteer/issues/1132#issuecomment-339420642
-                } else if (this._lastRedirectResponse && this._lastRedirectResponse.headers.location === interceptedRequest.url) {
+                } else if (this._lastRedirectResponse && this._lastRedirectResponse.headers().location === interceptedRequest.url()) {
                     this.getCookies()
                         .then(cookies => {
 
                             let cookiesResult = ['cookies', cookies],
-                                status = {'status': 'ok', 'redirect': interceptedRequest.url};
+                                status = {'status': 'ok', 'redirect': interceptedRequest.url()};
                             this.emit(Handler.Events.ProbeResult, cookiesResult);
                             this.emit(Handler.Events.Finished, 0, status);
 
                             if (this._options.verbosity >= 3) {
-                                logger.debug(`abort request: ${interceptedRequest.resourceType} ${interceptedRequest.url}`);
+                                logger.debug(`abort request: ${interceptedRequest.resourceType()} ${interceptedRequest.url()}`);
                             }
 
                             interceptedRequest.abort();
@@ -104,7 +104,7 @@
                     // https://github.com/GoogleChrome/puppeteer/issues/1062
                 } else if (this._reformatFirstRequest) {
 
-                    let overrides = {headers: interceptedRequest.headers};
+                    let overrides = {headers: interceptedRequest.headers()};
 
                     if (this._options.sendPOST) {
                         overrides.method = 'POST';
@@ -116,7 +116,7 @@
                     }
 
                     if (this._options.verbosity >= 2) {
-                        logger.debug(`accept request with overrides: ${interceptedRequest.resourceType} ${interceptedRequest.url}`);
+                        logger.debug(`accept request with overrides: ${interceptedRequest.resourceType()} ${interceptedRequest.url()}`);
                     }
 
                     interceptedRequest.continue(overrides)
@@ -127,7 +127,7 @@
                 } else {
 
                     if (this._options.verbosity >= 2) {
-                        logger.debug(`accept request: ${interceptedRequest.resourceType} ${interceptedRequest.url}`);
+                        logger.debug(`accept request: ${interceptedRequest.resourceType()} ${interceptedRequest.url()}`);
                     }
                     interceptedRequest.continue();
                 }
@@ -142,7 +142,7 @@
 
             this._page.on('dialog', dialog => {
                 if (this._options.verbosity >= 3) {
-                    logger.debug(`Page dialog, type "${dialog.type}": "${dialog.message()}"`);
+                    logger.debug(`Page dialog, type "${dialog.type()}": "${dialog.message()}"`);
                 }
                 dialog.accept();
             });
@@ -163,14 +163,14 @@
 
             this._page.on('console', consoleMessage => {
                 if (this._options.verbosity >= 1) {
-                    if (['error', 'warning', 'trace'].includes(consoleMessage.type)) {
-                        logger.warn(`Page console error message : "${consoleMessage.text}"`);
-                    } else if (consoleMessage.type === 'info' && this._options.verbosity >= 2) {
-                        logger.info(`Page console message : ${consoleMessage.text}`);
-                    } else if (consoleMessage.type === 'log' && this._options.verbosity >= 3) {
-                        logger.debug(`Page console message : "${consoleMessage.text}"`);
+                    if (['error', 'warning', 'trace'].includes(consoleMessage.type())) {
+                        logger.warn(`Page console error message : "${consoleMessage.text()}"`);
+                    } else if (consoleMessage.type() === 'info' && this._options.verbosity >= 2) {
+                        logger.info(`Page console message : ${consoleMessage.text()}`);
+                    } else if (consoleMessage.type() === 'log' && this._options.verbosity >= 3) {
+                        logger.debug(`Page console message : "${consoleMessage.text()}"`);
                     } else if (this._options.verbosity >= 4) {
-                        logger.debug(`Page console message, type ${consoleMessage.type} : "${consoleMessage.text}"`);
+                        logger.debug(`Page console message, type ${consoleMessage.type()} : "${consoleMessage.text()}"`);
                     }
                 }
             });
@@ -183,13 +183,14 @@
 
             this._page.on('requestfailed', failedRequest => {
                 if (this._options.verbosity >= 2) {
-                    logger.debug(`requestfailed: ${failedRequest.url}`);
+                    logger.debug(`requestfailed: ${failedRequest.url()}`);
                 }
             });
 
             this._page.on('requestfinished', finishedRequest => {
                 if (this._options.verbosity >= 2) {
-                    logger.debug(`requestfinished: ${finishedRequest.response().status}, ${finishedRequest.method} ${finishedRequest.url}`);
+                    logger.debug(`requestfinished: ${finishedRequest.response()
+                        .status()}, ${finishedRequest.method} ${finishedRequest.url()}`);
                 }
             });
 
@@ -221,7 +222,7 @@
                 this._page.setUserAgent(this._options.userAgent),
                 this._page.setCookie(...this._options.cookies),
                 this._page.setViewport(this._constants.viewport),
-                this._page.setRequestInterceptionEnabled(true),
+                this._page.setRequestInterception(true),
                 this._page.authenticate(this._options.httpAuth),
             ])
                 .then(() => {
@@ -255,7 +256,8 @@
     };
 
     function _isRedirect(response) {
-        return [301, 302, 303, 307, 308].includes(response.status) && response.request().resourceType === 'document';
+        return [301, 302, 303, 307, 308].includes(response.status()) && response.request()
+            .resourceType() === 'document';
     }
 
     exports.Handler = Handler;

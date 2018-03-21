@@ -78,12 +78,12 @@
                 if (options.verbosity >= 1) {
                     logger.info(`starting navigation to ${options.startUrl.href}`);
                 }
-                page.goto(options.startUrl.href, {waitUntil: 'networkidle'})
+                page.goto(options.startUrl.href, {waitUntil: 'networkidle2'})
                     .then(response => {
 
-                        if (response.ok) {
+                        if (response.ok()) {
                             // checking if it's some HTML document
-                            if (response.headers['content-type']
+                            if (response.headers()['content-type']
                                         .toLowerCase()
                                         .includes('text/html')) {
 
@@ -98,11 +98,11 @@
                                 // start analysis on the page
                                 handler.startProbe();
                             } else {
-                                result.push({'status': 'error', 'code': 'contentType', 'message': `content type is ${response.headers['content-type']}`});
+                                result.push({'status': 'error', 'code': 'contentType', 'message': `content type is ${response.headers()['content-type']}`});
                                 _requestJobEnd();
                             }
                         } else {
-                            result.push({'status': 'error', 'code': 'responseCode', 'message': `${response.status}`});
+                            result.push({'status': 'error', 'code': 'responseCode', 'message': `${response.status()}`});
                             _requestJobEnd(1);
                         }
                     },
