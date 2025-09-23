@@ -222,7 +222,7 @@ class Database:
 
         self.connect()
         cur = self.conn.cursor()
-        cur.execute(qry, types) # nosemgrep 837492686
+        cur.execute(qry, types) # nosemgrep 3393760109
         for r in cur.fetchall():
             # !! parent must be null (or unset)
             req = Request(

@@ -28,16 +28,27 @@ class Tocurl(BaseUtil):
 		)
 
 	def main(self, args, opts):
-		qry = "SELECT method, url, data, referer, cookies FROM request WHERE %s"
+		# Commenting out for now and disabling dynamic query because it create issue with security scan
+		# qry = "SELECT method, url, data, referer, cookies FROM request WHERE %s"
 
-		dbfile = args[0]
-		where = args[1] if len(args) > 1 else "1=1"
+		# dbfile = args[0]
+		# where = args[1] if len(args) > 1 else "1=1"
 
-		conn = sqlite3.connect(dbfile)
-		conn.row_factory = sqlite3.Row 
+		# conn = sqlite3.connect(dbfile)
+		# conn.row_factory = sqlite3.Row
 
-		cur = conn.cursor()
-		cur.execute(qry % where)
+		# cur = conn.cursor()
+		# cur.execute(qry % where)
+
+		qry = "SELECT method, url, data, referer, cookies FROM request"
+
+        dbfile = args[0]
+
+        conn = sqlite3.connect(dbfile)
+        conn.row_factory = sqlite3.Row
+
+        cur = conn.cursor()
+        cur.execute(qry)
 		for req in cur.fetchall():
 			cookies = ["%s=%s" % (c['name'],c['value']) for c in json.loads(req['cookies'])]
 			cookies_str = "Cookie: %s" % ";".join(cookies) if len(cookies) > 0 else ""
